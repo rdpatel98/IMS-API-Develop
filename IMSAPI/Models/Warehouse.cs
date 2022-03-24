@@ -12,6 +12,7 @@ namespace IMSAPI.Models
     {
         [Key]
         public int WarehouseId { get; set; }
+        [StringLength(10)]
         public string Id { get; set; }
         public string Name { get; set; }
         public int OrganizationId { get; set; }

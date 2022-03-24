@@ -13,7 +13,7 @@ namespace IMSAPI.Models
         [Key]
         public int InventoryAdjustmentItemsId { get; set; }
         public int InventoryAdjustmentId { get; set; }
-        public string LineNo { get; set; }
+        public Int16 LineNo { get; set; }
         public int ItemId { get; set; }
         public int WarehouseId { get; set; }
         public int WorkerId { get; set; }

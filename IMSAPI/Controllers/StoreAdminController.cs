@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
+using System.Data.Entity;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web.Http;
 using IMSAPI.ExceptionHandling;
 using IMSAPI.Models;
@@ -240,7 +242,7 @@ namespace IMSAPI.Controllers
                         organization.Status = 1;
 
                         context.SaveChanges();
-                        
+
                         transaction.Commit();
                         return CommonUtils.CreateSuccessApiResponse(ObjOrganization);
                     }
@@ -299,7 +301,7 @@ namespace IMSAPI.Controllers
                 }
             }
         }
-        
+
         private static void AddAddress(StoreContext context, Addresses item)
         {
             item.UpdatedUserId = -1;
@@ -614,7 +616,7 @@ namespace IMSAPI.Controllers
         {
             using (var context = new StoreContext())
             {
-                var resultList = context.UomConversions.Where(x=> x.OrganizationId == organizationId).ToList();
+                var resultList = context.UomConversions.Where(x => x.OrganizationId == organizationId).ToList();
                 return CommonUtils.CreateSuccessApiResponse(resultList);
             }
         }
@@ -1266,7 +1268,7 @@ namespace IMSAPI.Controllers
                                 context.Addresses.Add(item);
                                 context.SaveChanges();
                                 addressRelation.Add(new VendorAddress
-                                    {AddressId = item.AddressId, VendorId = objVendor.Vendor.VendorId});
+                                { AddressId = item.AddressId, VendorId = objVendor.Vendor.VendorId });
                                 addRelation = true;
                             }
                             else
@@ -1348,12 +1350,16 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/ListWarehouse")]
         [HttpGet]
-        public ApiResponse GetAllWarehouse(int organizationId)
+        public async Task<ApiResponse> GetAllWarehouse(int? organizationId)
         {
             using (var context = new StoreContext())
             {
-                var resultList = context.Warehouses.Where(e => e.Status == 1 && e.OrganizationId == organizationId).ToList();
-                return CommonUtils.CreateSuccessApiResponse(resultList);
+                var result = context.Warehouses.Where(e => e.Status == 1);
+                if (organizationId.HasValue && organizationId > 0)
+                {
+                    result = result.Where(x => x.OrganizationId == organizationId);
+                }
+                return CommonUtils.CreateSuccessApiResponse(await result.ToListAsync());
             }
         }
 
@@ -1499,7 +1505,7 @@ namespace IMSAPI.Controllers
                         worker.Status = 1;
 
                         context.SaveChanges();
-                        
+
                         transaction.Commit();
                         return CommonUtils.CreateSuccessApiResponse(objWarehouse);
                     }
@@ -1626,7 +1632,8 @@ namespace IMSAPI.Controllers
             {
                 var saveItemCategory = new SaveItemCategory
                 {
-                    ItemCategory = new ItemCategory(), ItemCategoryCollections = new List<ItemCategoryCollection>()
+                    ItemCategory = new ItemCategory(),
+                    ItemCategoryCollections = new List<ItemCategoryCollection>()
                 };
                 var sqlQuery = $"SELECT ic.ItemCategoryId, ic.CategoryId, c.[Name] AS CategoryName, ic.UpdatedUserId, ic.UpdatedDateTime, ic.[Status], ic.OrganizationId FROM dbo.ItemCategory ic " +
                                $"INNER JOIN dbo.Category c ON ic.CategoryId = c.CategoryId " +
@@ -1819,16 +1826,16 @@ namespace IMSAPI.Controllers
                             context.SaveChanges();
 
                             //Delete the item collection
-                            var itemCategoryCollectionList = context.ItemCategoryCollection.Where(x => x.CategoryId == objItemCategory.ItemCategory.CategoryId 
+                            var itemCategoryCollectionList = context.ItemCategoryCollection.Where(x => x.CategoryId == objItemCategory.ItemCategory.CategoryId
                                                                                                        && x.ItemCategoryId == objItemCategory.ItemCategory.ItemCategoryId).ToList();
                             foreach (var relation in itemCategoryCollectionList)
                             {
-                                var itemCategoryCollection = objItemCategory.ItemCategoryCollections.FirstOrDefault(x => x.CategoryId == relation.CategoryId 
-                                                                                                                         && x.ItemId == relation.ItemId 
+                                var itemCategoryCollection = objItemCategory.ItemCategoryCollections.FirstOrDefault(x => x.CategoryId == relation.CategoryId
+                                                                                                                         && x.ItemId == relation.ItemId
                                                                                                                          && x.ItemCategoryId == relation.ItemCategoryId);
                                 if (itemCategoryCollection == null)
                                 {
-                                    var itemCollection = context.ItemCategoryCollection.FirstOrDefault(e => e.ItemCategoryId == relation.ItemCategoryId 
+                                    var itemCollection = context.ItemCategoryCollection.FirstOrDefault(e => e.ItemCategoryId == relation.ItemCategoryId
                                                                                                         && e.ItemId == relation.ItemId && e.CategoryId == relation.CategoryId);
                                     if (itemCollection != null)
                                     {
@@ -1842,7 +1849,7 @@ namespace IMSAPI.Controllers
                             foreach (var itemCategoryCollection in objItemCategory.ItemCategoryCollections)
                             {
                                 var item = context.ItemCategoryCollection.FirstOrDefault(e =>
-                                    e.ItemCategoryId == objItemCategory.ItemCategory.ItemCategoryId && e.CategoryId == objItemCategory.ItemCategory.CategoryId 
+                                    e.ItemCategoryId == objItemCategory.ItemCategory.ItemCategoryId && e.CategoryId == objItemCategory.ItemCategory.CategoryId
                                                                                                     && e.ItemId == itemCategoryCollection.ItemId);
 
                                 if (item != null) continue;
@@ -1963,7 +1970,7 @@ namespace IMSAPI.Controllers
                             break;
                         }
                     default:
-                        prefix = new Random().Next(1,1000).ToString();
+                        prefix = new Random().Next(1, 1000).ToString();
                         break;
                 }
                 count++;
@@ -2122,7 +2129,7 @@ namespace IMSAPI.Controllers
                             purchaseOrder.UpdatedUserId = -1;
                             purchaseOrder.UpdatedDateTime = DateTime.UtcNow;
                             purchaseOrder.Status = 1;
-                            
+
                             context.SaveChanges();
 
                             foreach (var purchaseOrderItem in savePurchaseOrder.PurchaseOrderItems)
@@ -2302,7 +2309,7 @@ namespace IMSAPI.Controllers
 
                                 context.SaveChanges();
                             }
-                            
+
                             transaction.Commit();
                             return CommonUtils.CreateSuccessApiResponse(savePurchaseOrder.PurchaseReceive.PurchaseReceiveId);
                         }
@@ -2359,7 +2366,7 @@ namespace IMSAPI.Controllers
                             if (purchaseOrderReceive != null)
                                 purchaseOrderReceive.PurchaseReceiveStatus = 4;
                             context.SaveChanges();
-                            
+
 
                             var invoice = new Invoice
                             {
@@ -2414,7 +2421,7 @@ namespace IMSAPI.Controllers
                             {
                                 var ratio = Convert.ToDouble(context.UomConversions.FirstOrDefault(x => x.Id == purchaseOrderItem.UnitId)?.Ratio);
                                 var convertedQty = purchaseOrderItem.ReceiveQuantity * ratio;
-                                var onHandStock = context.Stocks.Where(x => x.ItemId == purchaseOrderItem.ItemId 
+                                var onHandStock = context.Stocks.Where(x => x.ItemId == purchaseOrderItem.ItemId
                                                                             && x.WarehouseId == purchaseOrderItem.WarehouseId).ToList().Sum(i => i.Quantity);
                                 var item = new Stock()
                                 {
@@ -2603,7 +2610,7 @@ namespace IMSAPI.Controllers
                                     context.SaveChanges();
                                 }
                             }
-                            
+
                             transaction.Commit();
 
                             return CommonUtils.CreateSuccessApiResponse(saveItemConsumption.Consumption.ConsumptionId);
@@ -2647,11 +2654,11 @@ namespace IMSAPI.Controllers
                             context.InventoryAdjustment.Add(saveInventoryAdjustment.InventoryAdjustment);
                             context.SaveChanges();
 
-                            var count = 0;
+                            Int16 count = 0;
                             foreach (var adjustmentItems in saveInventoryAdjustment.InventoryAdjustmentItems)
                             {
                                 count++;
-                                adjustmentItems.LineNo = count.ToString();
+                                adjustmentItems.LineNo = count;
                                 adjustmentItems.UpdatedUserId = -1;
                                 adjustmentItems.UpdatedDateTime = DateTime.UtcNow;
                                 adjustmentItems.InventoryAdjustmentId = saveInventoryAdjustment.InventoryAdjustment.InventoryAdjustmentId;
@@ -2709,6 +2716,28 @@ namespace IMSAPI.Controllers
             }
         }
 
+        [Route("api/StoreAdmin/GetInventoryAdjustmentByID")]
+        [HttpGet]
+        public ApiResponse GetInventoryAdjustmentById(int inventoryAdjustmentId)
+        {
+            using (var context = new StoreContext())
+            {
+                try
+                {
+                    var saveInventoryAdjustment = new SaveInventoryAdjustment()
+                    {
+                        InventoryAdjustmentItems = context.InventoryAdjustmentItems.Where(x => x.InventoryAdjustmentId == inventoryAdjustmentId).ToList(),
+                        InventoryAdjustment = context.InventoryAdjustment.FirstOrDefault(e => e.InventoryAdjustmentId == inventoryAdjustmentId),
+                    };
+
+                    return CommonUtils.CreateSuccessApiResponse(saveInventoryAdjustment);
+                }
+                catch (Exception ex)
+                {
+                    return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+                }
+            }
+        }
         #endregion
 
         #region Login
@@ -2723,7 +2752,7 @@ namespace IMSAPI.Controllers
                 {
                     if (userLogin.UserId == "admin" && userLogin.Password == "admin")
                     {
-                        return CommonUtils.CreateSuccessApiResponse(new UserDetail() { DefaultWarehouseId = 0, OrganizationId = 0, UserId = -1, UserName = ""});
+                        return CommonUtils.CreateSuccessApiResponse(new UserDetail() { DefaultWarehouseId = 0, OrganizationId = 0, UserId = -1, UserName = "" });
                     }
                     var worker = context.Workers.FirstOrDefault(e =>
                         e.UserId == userLogin.UserId && e.Password == userLogin.Password && e.IsBlocked == false &&
@@ -2733,7 +2762,10 @@ namespace IMSAPI.Controllers
                     var org = context.Organizations.FirstOrDefault(x => x.OrganizationId == worker.OrganizationId);
                     var userDetail = new UserDetail
                     {
-                        OrganizationId = worker.OrganizationId, UserId = worker.WorkerId, UserName = worker.Name, DefaultWarehouseId = Convert.ToInt32(org?.TransactionalWarehouseId)
+                        OrganizationId = worker.OrganizationId,
+                        UserId = worker.WorkerId,
+                        UserName = worker.Name,
+                        DefaultWarehouseId = Convert.ToInt32(org?.TransactionalWarehouseId)
                     };
                     return CommonUtils.CreateSuccessApiResponse(userDetail);
                 }
@@ -3010,6 +3042,17 @@ namespace IMSAPI.Controllers
             }
         }
 
+
+        [Route("api/StoreAdmin/ListInventoryAdjustment")]
+        [HttpGet]
+        public ApiResponse GetAllInventoryAdjustments(int organizationId)
+        {
+            using (StoreContext context = new StoreContext())
+            {
+                var resultList = context.InventoryAdjustment.Where(e => e.Status == 1 && e.OrganizationId == organizationId).ToList();
+                return CommonUtils.CreateSuccessApiResponse(resultList);
+            }
+        }
         #endregion
 
         #region Private Methods

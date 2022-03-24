@@ -18,5 +18,7 @@ namespace IMSAPI.Models
         public DateTime UpdatedDateTime { get; set; }
         public short Status { get; set; }
         public int OrganizationId { get; set; }
+        public int WarehouseId { get; set; }
+        public int WorkerId { get; set; }
     }
 }
