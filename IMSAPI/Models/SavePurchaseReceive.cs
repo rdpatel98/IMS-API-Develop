@@ -10,5 +10,6 @@ namespace IMSAPI.Models
         public PurchaseReceive PurchaseReceive { get; set; }
 
         public List<PurchaseReceiveItems> PurchaseReceiveItems { get; set; }
+        public string InvoiceNumber { get; set; }
     }
 }
