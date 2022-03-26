@@ -2340,7 +2340,7 @@ namespace IMSAPI.Controllers
         public ApiResponse SaveInvoice(SavePurchaseReceive savePurchaseOrder)
         {
             // save purchase receive
-            var response = SavePurchaseReceive(savePurchaseOrder);
+            var response = savePurchaseOrder.PurchaseReceive.PurchaseReceiveId > 0 ? SavePurchaseReceive(savePurchaseOrder) : AddPurchaseReceive(savePurchaseOrder);
             if (response.StatusCode != CommonUtils.ApiCallSuccess)
                 return response;
 
