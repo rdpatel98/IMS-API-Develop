@@ -1258,24 +1258,31 @@ namespace IMSAPI.Controllers
                         context.SaveChanges();
 
                         bool addRelation = false;
-                        foreach (var item in objVendor.Addresses)
+                        if(objVendor.Addresses != null)
                         {
-                            if (item.AddressId == 0)
+                            if(objVendor.Addresses.Any())
                             {
-                                item.UpdatedUserId = -1;
-                                item.UpdatedDateTime = DateTime.UtcNow;
-                                item.Status = 1;
-                                context.Addresses.Add(item);
-                                context.SaveChanges();
-                                addressRelation.Add(new VendorAddress
-                                { AddressId = item.AddressId, VendorId = objVendor.Vendor.VendorId });
-                                addRelation = true;
-                            }
-                            else
-                            {
-                                UpdateAddress(context, item);
+                                foreach (var item in objVendor.Addresses)
+                                {
+                                    if (item.AddressId == 0)
+                                    {
+                                        item.UpdatedUserId = -1;
+                                        item.UpdatedDateTime = DateTime.UtcNow;
+                                        item.Status = 1;
+                                        context.Addresses.Add(item);
+                                        context.SaveChanges();
+                                        addressRelation.Add(new VendorAddress
+                                        { AddressId = item.AddressId, VendorId = objVendor.Vendor.VendorId });
+                                        addRelation = true;
+                                    }
+                                    else
+                                    {
+                                        UpdateAddress(context, item);
+                                    }
+                                }
                             }
                         }
+                        
 
                         if (addRelation)
                         {
