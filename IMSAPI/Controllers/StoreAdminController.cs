@@ -2220,6 +2220,7 @@ namespace IMSAPI.Controllers
                 {
                     var savePurchaseOrder = new SavePurchaseReceive()
                     {
+                        InvoiceNumber = context.Invoice.FirstOrDefault(x => x.PurchaseOrderId == purchaseOrderId)?.InvoiceNo,
                         PurchaseReceiveItems = null,
                         PurchaseReceive = context.PurchaseReceive.FirstOrDefault(e => e.PurchaseOrderId == purchaseOrderId)
                     };
@@ -2397,7 +2398,7 @@ namespace IMSAPI.Controllers
                             {
                                 VendorId = savePurchaseOrder.PurchaseReceive.VendorId,
                                 NetAmount = savePurchaseOrder.PurchaseReceive.NetAmount,
-                                InvoiceNo = transactionNo,
+                                InvoiceNo = savePurchaseOrder.InvoiceNumber,
                                 PurchaseOrderId = savePurchaseOrder.PurchaseReceive.PurchaseOrderId,
                                 InvoiceStatus = 1,
                                 InvoiceDate = DateTime.UtcNow,
