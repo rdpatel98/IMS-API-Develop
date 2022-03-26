@@ -1258,9 +1258,9 @@ namespace IMSAPI.Controllers
                         context.SaveChanges();
 
                         bool addRelation = false;
-                        if(objVendor.Addresses != null)
+                        if (objVendor.Addresses != null)
                         {
-                            if(objVendor.Addresses.Any())
+                            if (objVendor.Addresses.Any())
                             {
                                 foreach (var item in objVendor.Addresses)
                                 {
@@ -1282,7 +1282,7 @@ namespace IMSAPI.Controllers
                                 }
                             }
                         }
-                        
+
 
                         if (addRelation)
                         {
@@ -2188,6 +2188,24 @@ namespace IMSAPI.Controllers
             }
         }
 
+        [Route("api/StoreAdmin/GetPurchaseOrderUnitPriceByItemId")]
+        [HttpGet]
+        public ApiResponse GetPurchaseOrderUnitPriceByItemId(int itemId)
+        {
+            using (var context = new StoreContext())
+            {
+                try
+                {
+                    var purchaseOrder = context.PurchaseOrderItems.OrderByDescending(x => x.PurchaseOrderItemsId).FirstOrDefault(x => x.ItemId == itemId);
+
+                    return CommonUtils.CreateSuccessApiResponse(purchaseOrder?.UnitPrice ?? double.NaN);
+                }
+                catch (Exception ex)
+                {
+                    return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+                }
+            }
+        }
         #endregion
 
         #region Purchase Receive
