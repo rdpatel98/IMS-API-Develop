@@ -13,9 +13,10 @@ namespace IMSAPI.Models
         [Key]
         public int InvoiceItemsId { get; set; }
         public int InvoiceId { get; set; }
+        public int PurchaseOrderItemsId { get; set; }
         public short LineNo { get; set; }
         public int ItemId { get; set; }
-        public int WarehouseId { get; set; }
+        public int WarehouseId { get; set; }      
         public double Quantity { get; set; }
         public double ReceivedQuantity { get; set; }
         public int UnitId { get; set; }
