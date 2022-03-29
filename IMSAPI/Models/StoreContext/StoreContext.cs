@@ -1,4 +1,5 @@
-﻿using System.Data.Entity;
+﻿using System;
+using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
 
 namespace IMSAPI.Models.UnboxFutureContext
@@ -8,6 +9,7 @@ namespace IMSAPI.Models.UnboxFutureContext
         public StoreContext()
             : base("name=StoreContext")
         {
+            this.Database.Log = Console.Write;
             var adapter = (IObjectContextAdapter)this;
             var objectContext = adapter.ObjectContext; 
             objectContext.CommandTimeout = 180;

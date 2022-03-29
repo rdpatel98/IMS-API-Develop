@@ -2254,13 +2254,15 @@ namespace IMSAPI.Controllers
                     {
                         try
                         {
-                            var purchaseReceiveNo = context.PurchaseOrders.FirstOrDefault(e => e.PurchaseOrderId == savePurchaseOrder.PurchaseReceive.PurchaseOrderId)?.PurchaseOrderNo ?? string.Empty;
+
+                            var purchaseOrder = context.PurchaseOrders.FirstOrDefault(e => e.PurchaseOrderId == savePurchaseOrder.PurchaseReceive.PurchaseOrderId);
+                            purchaseOrder.OrderStatus = 4;
                             savePurchaseOrder.PurchaseReceive.UpdatedUserId = -1;
                             savePurchaseOrder.PurchaseReceive.UpdatedDateTime = DateTime.UtcNow;
                             savePurchaseOrder.PurchaseReceive.Status = 1;
-                            savePurchaseOrder.PurchaseReceive.PurchaseReceiveStatus = 1;
+                            savePurchaseOrder.PurchaseReceive.PurchaseReceiveStatus = 4;
                             savePurchaseOrder.PurchaseReceive.PurchaseReceiveDate = DateTime.UtcNow;
-                            savePurchaseOrder.PurchaseReceive.PurchaseReceiveNo = purchaseReceiveNo;
+                            savePurchaseOrder.PurchaseReceive.PurchaseReceiveNo = purchaseOrder?.PurchaseOrderNo;
                             context.PurchaseReceive.Add(savePurchaseOrder.PurchaseReceive);
                             context.SaveChanges();
 
@@ -2272,7 +2274,7 @@ namespace IMSAPI.Controllers
                                 context.PurchaseReceiveItems.Add(purchaseOrderItem);
                                 context.SaveChanges();
                             }
-                            AddInvoice(savePurchaseOrder);
+                            AddInvoice(context, savePurchaseOrder, purchaseOrder);
                             transaction.Commit();
                             return CommonUtils.CreateSuccessApiResponse(savePurchaseOrder.PurchaseReceive.PurchaseReceiveId);
                         }
@@ -2308,57 +2310,40 @@ namespace IMSAPI.Controllers
                             var purchaseReceiveNo = context.PurchaseOrders.FirstOrDefault(e => e.PurchaseOrderId == savePurchaseOrder.PurchaseReceive.PurchaseOrderId)?.PurchaseOrderNo ?? string.Empty;
                             var purchaseReceive = context.PurchaseReceive.FirstOrDefault(x =>
                                 x.PurchaseReceiveId == savePurchaseOrder.PurchaseReceive.PurchaseReceiveId);
-                            if (purchaseReceive.PurchaseReceiveStatus == 1)
-                            {
-                                purchaseReceive.NetAmount = savePurchaseOrder.PurchaseReceive.NetAmount;
-                                purchaseReceive.OrganizationId = savePurchaseOrder.PurchaseReceive.OrganizationId;
-                                purchaseReceive.PurchaseOrderId = savePurchaseOrder.PurchaseReceive.PurchaseOrderId;
-                                purchaseReceive.PurchaseReceiveNo = purchaseReceiveNo;
-                                purchaseReceive.VendorId = savePurchaseOrder.PurchaseReceive.VendorId;
-                                purchaseReceive.NetAmount = savePurchaseOrder.PurchaseReceive.NetAmount;
-                                purchaseReceive.PurchaseReceiveDate = savePurchaseOrder.PurchaseReceive.PurchaseReceiveDate;
-                                purchaseReceive.UpdatedUserId = -1;
-                                purchaseReceive.UpdatedDateTime = DateTime.UtcNow;
-                                context.SaveChanges();
-                            }
+                            purchaseReceive.NetAmount = savePurchaseOrder.PurchaseReceive.NetAmount;
+                            purchaseReceive.OrganizationId = savePurchaseOrder.PurchaseReceive.OrganizationId;
+                            purchaseReceive.PurchaseOrderId = savePurchaseOrder.PurchaseReceive.PurchaseOrderId;
+                            purchaseReceive.PurchaseReceiveNo = purchaseReceiveNo;
+                            purchaseReceive.VendorId = savePurchaseOrder.PurchaseReceive.VendorId;
+                            purchaseReceive.NetAmount = savePurchaseOrder.PurchaseReceive.NetAmount;
+                            purchaseReceive.PurchaseReceiveDate = savePurchaseOrder.PurchaseReceive.PurchaseReceiveDate;
+                            purchaseReceive.UpdatedUserId = -1;
+                            purchaseReceive.UpdatedDateTime = DateTime.UtcNow;
+                            context.SaveChanges();
 
 
                             foreach (var purchaseOrderItem in savePurchaseOrder.PurchaseReceiveItems)
                             {
                                 var item = context.PurchaseReceiveItems.FirstOrDefault(x =>
                                     x.PurchaseReceiveItemsId == purchaseOrderItem.PurchaseReceiveItemsId);
-                                if (purchaseReceive.PurchaseReceiveStatus == 1)
-                                {
-                                    item.BatchNo = purchaseOrderItem.BatchNo;
-                                    item.PurchaseReceiveId = purchaseOrderItem.PurchaseReceiveId;
-                                    item.PurchaseOrderItemsId = purchaseOrderItem.PurchaseOrderItemsId;
-                                    item.NetAmount = purchaseOrderItem.NetAmount;
-                                    item.ItemId = purchaseOrderItem.ItemId;
-                                    item.LineNo = purchaseOrderItem.LineNo;
-                                    item.WarehouseId = purchaseOrderItem.WarehouseId;
-                                    item.Quantity = purchaseOrderItem.Quantity;
-                                    item.UnitId = purchaseOrderItem.UnitId;
-                                    item.UnitPrice = purchaseOrderItem.UnitPrice;
-                                }
+                                item.BatchNo = purchaseOrderItem.BatchNo;
+                                item.PurchaseReceiveId = purchaseOrderItem.PurchaseReceiveId;
+                                item.PurchaseOrderItemsId = purchaseOrderItem.PurchaseOrderItemsId;
+                                item.NetAmount = purchaseOrderItem.NetAmount;
+                                item.ItemId = purchaseOrderItem.ItemId;
+                                item.LineNo = purchaseOrderItem.LineNo;
+                                item.WarehouseId = purchaseOrderItem.WarehouseId;
+                                item.Quantity = purchaseOrderItem.Quantity;
+                                item.UnitId = purchaseOrderItem.UnitId;
+                                item.UnitPrice = purchaseOrderItem.UnitPrice;
                                 item.ReceiveQuantity = purchaseOrderItem.ReceiveQuantity;
                                 item.UpdatedDateTime = DateTime.UtcNow;
                                 item.UpdatedUserId = purchaseOrderItem.UpdatedUserId;
-                                if (purchaseReceive.PurchaseReceiveStatus == 4)
-                                {
-                                    var invoice = context.Invoice.FirstOrDefault(x => x.PurchaseOrderId == purchaseReceive.PurchaseOrderId);
-                                    if (invoice != null)
-                                    {
-                                        var invoiceItem = context.InvoiceItems.FirstOrDefault(x => x.InvoiceId == invoice.InvoiceId && x.PurchaseOrderItemsId == item.PurchaseOrderItemsId);
-                                        if (invoiceItem != null)
-                                        {
-                                            invoiceItem.ReceivedQuantity = item.ReceiveQuantity;
-                                        }
-                                    }
-                                }
+
                                 context.SaveChanges();
                             }
 
-                            UpdateInvoice(savePurchaseOrder);
+                            UpdateInvoice(context, savePurchaseOrder);
 
                             transaction.Commit();
                             return CommonUtils.CreateSuccessApiResponse(savePurchaseOrder.PurchaseReceive.PurchaseReceiveId);
@@ -2381,106 +2366,87 @@ namespace IMSAPI.Controllers
         }
 
 
-        private void AddInvoice(SavePurchaseReceive savePurchaseOrder)
+        private void AddInvoice(StoreContext context, SavePurchaseReceive savePurchaseOrder, PurchaseOrder purchaseOrder)
         {
             try
             {
-                using (var context = new StoreContext())
+                string transactionNo = string.Empty;
+                if (purchaseOrder != null)
                 {
-                    using (var transaction = context.Database.BeginTransaction())
+                    transactionNo = purchaseOrder.PurchaseOrderNo;
+                }
+
+
+                var invoice = new Invoice
+                {
+                    VendorId = savePurchaseOrder.PurchaseReceive.VendorId,
+                    NetAmount = savePurchaseOrder.PurchaseReceive.NetAmount,
+                    InvoiceNo = savePurchaseOrder.InvoiceNumber,
+                    PurchaseOrderId = savePurchaseOrder.PurchaseReceive.PurchaseOrderId,
+                    InvoiceStatus = 4,
+                    InvoiceDate = DateTime.UtcNow,
+                    UpdatedUserId = savePurchaseOrder.PurchaseReceive.UpdatedUserId,
+                    UpdatedDateTime = DateTime.UtcNow,
+                    Status = 1,
+                    OrganizationId = savePurchaseOrder.PurchaseReceive.OrganizationId
+                };
+                context.Invoice.Add(invoice);
+                context.SaveChanges();
+
+                foreach (var purchaseOrderItem in savePurchaseOrder.PurchaseReceiveItems)
+                {
+                    var item = new InvoiceItems
                     {
-                        try
-                        {
-                            string transactionNo = string.Empty;
-                            var purchaseOrder = context.PurchaseOrders.FirstOrDefault(e =>
-                                e.PurchaseOrderId == savePurchaseOrder.PurchaseReceive.PurchaseOrderId);
-                            if (purchaseOrder != null)
-                            {
-                                transactionNo = purchaseOrder.PurchaseOrderNo;
-                            }
+                        BatchNo = purchaseOrderItem.BatchNo,
+                        InvoiceId = invoice.InvoiceId,
+                        NetAmount = purchaseOrderItem.NetAmount,
+                        ItemId = purchaseOrderItem.ItemId,
+                        LineNo = purchaseOrderItem.LineNo,
+                        PurchaseOrderItemsId = purchaseOrderItem.PurchaseOrderItemsId,
+                        WarehouseId = purchaseOrderItem.WarehouseId,
+                        Quantity = purchaseOrderItem.Quantity,
+                        ReceivedQuantity = purchaseOrderItem.ReceiveQuantity,
+                        UnitId = purchaseOrderItem.UnitId,
+                        UnitPrice = purchaseOrderItem.UnitPrice,
+                        InvoiceNo = invoice.InvoiceNo,
+                        InvoiceDate = DateTime.UtcNow,
+                        UpdatedDateTime = DateTime.UtcNow,
+                        UpdatedUserId = purchaseOrderItem.UpdatedUserId
+                    };
+                    context.InvoiceItems.Add(item);
+                    context.SaveChanges();
+                }
 
+                var transactionItem = new Transactions
+                {
+                    TransactionId = transactionNo,
+                    Type = 3,
+                    RelationId = invoice.InvoiceId,
+                    OrganizationId = invoice.OrganizationId
+                };
+                context.Transactions.Add(transactionItem);
+                context.SaveChanges();
 
-                            var invoice = new Invoice
-                            {
-                                VendorId = savePurchaseOrder.PurchaseReceive.VendorId,
-                                NetAmount = savePurchaseOrder.PurchaseReceive.NetAmount,
-                                InvoiceNo = savePurchaseOrder.InvoiceNumber,
-                                PurchaseOrderId = savePurchaseOrder.PurchaseReceive.PurchaseOrderId,
-                                InvoiceStatus = 1,
-                                InvoiceDate = DateTime.UtcNow,
-                                UpdatedUserId = savePurchaseOrder.PurchaseReceive.UpdatedUserId,
-                                UpdatedDateTime = DateTime.UtcNow,
-                                Status = 1,
-                                OrganizationId = savePurchaseOrder.PurchaseReceive.OrganizationId
-                            };
-                            context.Invoice.Add(invoice);
-                            context.SaveChanges();
-
-                            foreach (var purchaseOrderItem in savePurchaseOrder.PurchaseReceiveItems)
-                            {
-                                var item = new InvoiceItems
-                                {
-                                    BatchNo = purchaseOrderItem.BatchNo,
-                                    InvoiceId = invoice.InvoiceId,
-                                    NetAmount = purchaseOrderItem.NetAmount,
-                                    ItemId = purchaseOrderItem.ItemId,
-                                    LineNo = purchaseOrderItem.LineNo,
-                                    PurchaseOrderItemsId = purchaseOrderItem.PurchaseOrderItemsId,
-                                    WarehouseId = purchaseOrderItem.WarehouseId,
-                                    Quantity = purchaseOrderItem.Quantity,
-                                    ReceivedQuantity = purchaseOrderItem.ReceiveQuantity,
-                                    UnitId = purchaseOrderItem.UnitId,
-                                    UnitPrice = purchaseOrderItem.UnitPrice,
-                                    InvoiceNo = invoice.InvoiceNo,
-                                    InvoiceDate = DateTime.UtcNow,
-                                    UpdatedDateTime = DateTime.UtcNow,
-                                    UpdatedUserId = purchaseOrderItem.UpdatedUserId
-                                };
-                                context.InvoiceItems.Add(item);
-                                context.SaveChanges();
-                            }
-
-                            var transactionItem = new Transactions
-                            {
-                                TransactionId = transactionNo,
-                                Type = 3,
-                                RelationId = invoice.InvoiceId,
-                                OrganizationId = invoice.OrganizationId
-                            };
-                            context.Transactions.Add(transactionItem);
-                            context.SaveChanges();
-
-                            foreach (var purchaseOrderItem in savePurchaseOrder.PurchaseReceiveItems)
-                            {
-                                var ratio = Convert.ToDouble(context.UomConversions.FirstOrDefault(x => x.Id == purchaseOrderItem.UnitId)?.Ratio);
-                                var convertedQty = purchaseOrderItem.ReceiveQuantity * ratio;
-                                var onHandStock = context.Stocks.Where(x => x.ItemId == purchaseOrderItem.ItemId
-                                                                            && x.WarehouseId == purchaseOrderItem.WarehouseId).ToList().Sum(i => i.Quantity);
-                                var item = new Stock()
-                                {
-                                    ItemId = purchaseOrderItem.ItemId,
-                                    WarehouseId = purchaseOrderItem.WarehouseId,
-                                    WorkerId = purchaseOrderItem.UpdatedUserId,
-                                    Quantity = convertedQty,
-                                    OnHandQuantity = onHandStock + convertedQty,
-                                    TransactionId = transactionItem.Id,
-                                    UpdatedDateTime = DateTime.UtcNow,
-                                    UpdatedUserId = purchaseOrderItem.UpdatedUserId,
-                                    Status = 1,
-                                };
-                                context.Stocks.Add(item);
-                                context.SaveChanges();
-                            }
-
-                            transaction.Commit();
-
-                        }
-                        catch (Exception ex)
-                        {
-                            transaction.Rollback();
-                            ExceptionHandledLogger.Log(ex);
-                        }
-                    }
+                foreach (var purchaseOrderItem in savePurchaseOrder.PurchaseReceiveItems)
+                {
+                    var ratio = Convert.ToDouble(context.UomConversions.FirstOrDefault(x => x.Id == purchaseOrderItem.UnitId)?.Ratio);
+                    var convertedQty = purchaseOrderItem.ReceiveQuantity * ratio;
+                    var onHandStock = context.Stocks.Where(x => x.ItemId == purchaseOrderItem.ItemId
+                                                                && x.WarehouseId == purchaseOrderItem.WarehouseId).ToList().Sum(i => i.Quantity);
+                    var item = new Stock()
+                    {
+                        ItemId = purchaseOrderItem.ItemId,
+                        WarehouseId = purchaseOrderItem.WarehouseId,
+                        WorkerId = purchaseOrderItem.UpdatedUserId,
+                        Quantity = convertedQty,
+                        OnHandQuantity = onHandStock + convertedQty,
+                        TransactionId = transactionItem.Id,
+                        UpdatedDateTime = DateTime.UtcNow,
+                        UpdatedUserId = purchaseOrderItem.UpdatedUserId,
+                        Status = 1,
+                    };
+                    context.Stocks.Add(item);
+                    context.SaveChanges();
                 }
             }
             catch (Exception ex)
@@ -2488,67 +2454,51 @@ namespace IMSAPI.Controllers
                 ExceptionHandledLogger.Log(ex);
             }
         }
-        private void UpdateInvoice(SavePurchaseReceive savePurchaseOrder)
+        private void UpdateInvoice(StoreContext context, SavePurchaseReceive savePurchaseOrder)
         {
             try
             {
-                using (var context = new StoreContext())
+                var invoice = context.Invoice.FirstOrDefault(x => x.PurchaseOrderId == savePurchaseOrder.PurchaseReceive.PurchaseOrderId);
+                invoice.InvoiceNo = savePurchaseOrder.InvoiceNumber;
+                context.SaveChanges();
+                var invoiceItems = context.InvoiceItems.Where(x => x.InvoiceId == invoice.InvoiceId).ToList();
+                foreach (var purchaseOrderItem in savePurchaseOrder.PurchaseReceiveItems)
                 {
-                    using (var transaction = context.Database.BeginTransaction())
-                    {
-                        try
-                        {
-
-                            var invoice = context.Invoice.FirstOrDefault(x => x.PurchaseOrderId == savePurchaseOrder.PurchaseReceive.PurchaseOrderId);
-                            invoice.InvoiceNo = savePurchaseOrder.InvoiceNumber;
-                            context.SaveChanges();
-
-                            foreach (var purchaseOrderItem in savePurchaseOrder.PurchaseReceiveItems)
-                            {
-                                var invoiceItem = context.InvoiceItems.FirstOrDefault(x => x.InvoiceId == invoice.InvoiceId && x.PurchaseOrderItemsId == purchaseOrderItem.PurchaseOrderItemsId);
-                                invoiceItem.InvoiceNo = invoice.InvoiceNo;
-                                invoiceItem.ReceivedQuantity = purchaseOrderItem.ReceiveQuantity;
-                                invoiceItem.BatchNo = purchaseOrderItem.BatchNo;
-                                context.SaveChanges();
-                            }
-
-                            var transactionItem = context.Transactions.FirstOrDefault(x => x.RelationId == invoice.InvoiceId);
-
-                            var stocks = context.Stocks.Where(x => x.TransactionId == transactionItem.Id).ToList();
-                            if (stocks.Any())
-                                context.Stocks.RemoveRange(stocks);
-                            foreach (var purchaseOrderItem in savePurchaseOrder.PurchaseReceiveItems)
-                            {
-                                var ratio = Convert.ToDouble(context.UomConversions.FirstOrDefault(x => x.Id == purchaseOrderItem.UnitId)?.Ratio);
-                                var convertedQty = purchaseOrderItem.ReceiveQuantity * ratio;
-                                var onHandStock = context.Stocks.Where(x => x.ItemId == purchaseOrderItem.ItemId
-                                                                            && x.WarehouseId == purchaseOrderItem.WarehouseId).ToList().Sum(i => i.Quantity);
-                                var item = new Stock()
-                                {
-                                    ItemId = purchaseOrderItem.ItemId,
-                                    WarehouseId = purchaseOrderItem.WarehouseId,
-                                    WorkerId = purchaseOrderItem.UpdatedUserId,
-                                    Quantity = convertedQty,
-                                    OnHandQuantity = onHandStock + convertedQty,
-                                    TransactionId = transactionItem.Id,
-                                    UpdatedDateTime = DateTime.UtcNow,
-                                    UpdatedUserId = purchaseOrderItem.UpdatedUserId,
-                                    Status = 1,
-                                };
-                                context.Stocks.Add(item);
-                                context.SaveChanges();
-                            }
-
-                            transaction.Commit();
-
-                        }
-                        catch (Exception ex)
-                        {
-                            transaction.Rollback();
-                            ExceptionHandledLogger.Log(ex);
-                        }
-                    }
+                    var invoiceItem = invoiceItems.FirstOrDefault(x => x.PurchaseOrderItemsId == purchaseOrderItem.PurchaseOrderItemsId);
+                    invoiceItem.InvoiceNo = invoice.InvoiceNo;
+                    invoiceItem.ReceivedQuantity = purchaseOrderItem.ReceiveQuantity;
+                    invoiceItem.BatchNo = purchaseOrderItem.BatchNo;
+                    context.SaveChanges();
                 }
+
+                var transactionItem = context.Transactions.FirstOrDefault(x => x.RelationId == invoice.InvoiceId);
+
+                var stocks = context.Stocks.Where(x => x.TransactionId == transactionItem.Id).ToList();
+                if (stocks.Any())
+                    context.Stocks.RemoveRange(stocks);
+                foreach (var purchaseOrderItem in savePurchaseOrder.PurchaseReceiveItems)
+                {
+                    var ratio = Convert.ToDouble(context.UomConversions.FirstOrDefault(x => x.Id == purchaseOrderItem.UnitId)?.Ratio);
+                    var convertedQty = purchaseOrderItem.ReceiveQuantity * ratio;
+                    var onHandStock = context.Stocks.Where(x => x.ItemId == purchaseOrderItem.ItemId
+                                                                && x.WarehouseId == purchaseOrderItem.WarehouseId).ToList().Sum(i => i.Quantity);
+                    var item = new Stock()
+                    {
+                        ItemId = purchaseOrderItem.ItemId,
+                        WarehouseId = purchaseOrderItem.WarehouseId,
+                        WorkerId = purchaseOrderItem.UpdatedUserId,
+                        Quantity = convertedQty,
+                        OnHandQuantity = onHandStock + convertedQty,
+                        TransactionId = transactionItem.Id,
+                        UpdatedDateTime = DateTime.UtcNow,
+                        UpdatedUserId = purchaseOrderItem.UpdatedUserId,
+                        Status = 1,
+                    };
+                    context.Stocks.Add(item);
+                    context.SaveChanges();
+                }
+
+
             }
             catch (Exception ex)
             {
