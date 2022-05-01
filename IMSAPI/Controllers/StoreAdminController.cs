@@ -9,6 +9,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using IMSAPI.DTO;
 using IMSAPI.ExceptionHandling;
 using IMSAPI.Models;
 using IMSAPI.Models.UnboxFutureContext;
@@ -888,6 +889,7 @@ namespace IMSAPI.Controllers
                         items.MaxStock = objItems.MaxStock;
                         items.SourceOfOrigin = objItems.SourceOfOrigin;
                         items.Status = 1;
+                        items.ItemTypeId = objItems.ItemTypeId;
                         context.SaveChanges();
                         transaction.Commit();
                         return CommonUtils.CreateSuccessApiResponse(items);
@@ -2336,10 +2338,10 @@ namespace IMSAPI.Controllers
                                 item.Quantity = purchaseOrderItem.Quantity;
                                 item.UnitId = purchaseOrderItem.UnitId;
                                 item.UnitPrice = purchaseOrderItem.UnitPrice;
-                                item.ReceiveQuantity = purchaseOrderItem.ReceiveQuantity;
+                                item.ReceiveQuantity = purchaseOrderItem.ReceiveQuantity + item.ReceiveQuantity;
                                 item.UpdatedDateTime = DateTime.UtcNow;
                                 item.UpdatedUserId = purchaseOrderItem.UpdatedUserId;
-
+                                purchaseOrderItem.ReceiveQuantity = item.ReceiveQuantity;
                                 context.SaveChanges();
                             }
 
@@ -2413,6 +2415,7 @@ namespace IMSAPI.Controllers
                         UpdatedDateTime = DateTime.UtcNow,
                         UpdatedUserId = purchaseOrderItem.UpdatedUserId
                     };
+
                     context.InvoiceItems.Add(item);
                     context.SaveChanges();
                 }
@@ -2476,6 +2479,7 @@ namespace IMSAPI.Controllers
                 var stocks = context.Stocks.Where(x => x.TransactionId == transactionItem.Id).ToList();
                 if (stocks.Any())
                     context.Stocks.RemoveRange(stocks);
+                context.SaveChanges();
                 foreach (var purchaseOrderItem in savePurchaseOrder.PurchaseReceiveItems)
                 {
                     var ratio = Convert.ToDouble(context.UomConversions.FirstOrDefault(x => x.Id == purchaseOrderItem.UnitId)?.Ratio);
@@ -3247,5 +3251,240 @@ namespace IMSAPI.Controllers
             return sb.ToString();
         }
         #endregion
+
+        #region Report
+        [Route("api/StoreAdmin/GetItemCategoryReport")]
+        [HttpPost]
+        public ApiResponse GetItemCategoryReport(ConsumptionReportFilter request)
+        {
+            try
+            {
+                using (var context = new StoreContext())
+                {
+                    using (var transaction = context.Database.BeginTransaction())
+                    {
+                        try
+                        {
+                            var response = new ConsumptionReportModel();
+                            response.Reports = (from item in context.Items
+                                                join conIt in context.ConsumptionItems on item.ItemId equals conIt.ItemId
+                                                join con in context.Consumption on conIt.ConsumptionId equals con.ConsumptionId
+                                                join work in context.Workers on con.WorkerId equals work.WorkerId
+                                                join stock in context.Stocks on item.ItemId equals stock.ItemId
+                                                select new ReportModel()
+                                                {
+                                                    ItemId = item.ItemId,
+                                                    ItemName = item.Name,
+                                                    OnHand = stock.OnHandQuantity.ToString(),
+                                                    Worker = work.Name
+                                                });
+                            response.Reports = context.Items.Where(e => e.Status == 1 && e.OrganizationId == request.OrganizationId).Select(x => new ReportModel()
+                            {
+                                ItemId = x.ItemId,
+                                ItemName = x.Name,
+                                OnHand = "",
+                                Worker = ""
+                            });
+                            var resultList = context.Items.Where(e => e.Status == 1 && e.OrganizationId == request.OrganizationId).ToList();
+                            var avgPriceList = GetItemsAvgPrice(request.OrganizationId);
+                            foreach (var item in resultList)
+                            {
+                                var itemDetail = avgPriceList.FirstOrDefault(x => x.ItemId == item.ItemId);
+                                if (itemDetail == null) continue;
+                                item.AvgPrice = itemDetail.AvgPrice;
+                                item.SourceOfOriginName = itemDetail.SourceOfOriginName;
+                            }
+                            return CommonUtils.CreateSuccessApiResponse(response);
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            ExceptionHandledLogger.Log(ex);
+                            return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ExceptionHandledLogger.Log(ex);
+                return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+            }
+        }
+        [Route("api/StoreAdmin/GetOnHandReport")]
+        [HttpPost]
+        public ApiResponse GetOnHandReport(OnHandReportFilter request)
+        {
+            try
+            {
+                using (var context = new StoreContext())
+                {
+                    using (var transaction = context.Database.BeginTransaction())
+                    {
+                        try
+                        {
+                            var onHandReportList = new List<OnHandReportModel>();
+
+                            var con = new SqlConnection(connStr);
+                            con.Open();
+
+                            var sqlQuery = $" ;with cteRowNumber as ( select s.ItemId,  s.OnHandQuantity, s.WarehouseId, " +
+                            $" row_number() over(partition by s.ItemId , s.WarehouseId order by s.StockId desc) as RowNum from dbo.Stock s " +
+                            $" INNER JOIN dbo.Items i ON i.ItemId = s.ItemId " +
+                            $" where i.OrganizationId = {request.OrganizationId} And s.WarehouseId = {request.WarehouseId} And (s.UpdatedDateTime >= '{request.FromDate.ToString("yyyy-MM-dd")}' And s.UpdatedDateTime <= '{request.ToDate.ToString("yyyy-MM-dd")}'))" +
+                            $" select cte.ItemId, cte.OnHandQuantity , i.Name,iT.ItemTypeId as ItemTypeId from cteRowNumber cte  " +
+                            $" INNER JOIN dbo.Items i ON i.ItemId = cte.ItemId " +
+                            $" Left JOIN dbo.ItemTypes iT ON i.ItemTypeId = iT.ItemTypeId " +
+                            $" INNER JOIN dbo.WareHouse w ON w.WarehouseId = cte.WarehouseId where cte.RowNum = 1 ";
+
+
+                            using (var command = new SqlCommand(sqlQuery, con))
+                            {
+                                command.CommandType = CommandType.Text;
+
+                                using (var reader = command.ExecuteReader())
+                                {
+                                    while (reader.Read())
+                                    {
+                                        var onHandReport = new OnHandReportModel();
+                                        onHandReport.ItemId = int.Parse(reader["ItemId"].ToString());
+                                        onHandReport.ItemName = reader["Name"].ToString();
+                                        onHandReport.ItemTypeId = reader["ItemTypeId"].ToString();
+                                        onHandReport.OnHand = reader["OnHandQuantity"].ToString();
+                                        onHandReportList.Add(onHandReport);
+                                    }
+                                }
+                            }
+                            if (request.ItemType.HasValue && request.ItemType > 0)
+                            {
+                                onHandReportList = onHandReportList.Where(x => x.ItemTypeId == request.ItemType.Value.ToString()).ToList();
+                            }
+                            con.Close();
+                            return CommonUtils.CreateSuccessApiResponse(onHandReportList);
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            ExceptionHandledLogger.Log(ex);
+                            return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ExceptionHandledLogger.Log(ex);
+                return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+            }
+        }
+
+        [Route("api/StoreAdmin/GetPurchaseEnquiryReport")]
+        [HttpPost]
+        public ApiResponse GetPurchaseEnquiryReport(PurchaseEnquiryReportFilter request)
+        {
+            try
+            {
+                using (var context = new StoreContext())
+                {
+                    using (var transaction = context.Database.BeginTransaction())
+                    {
+                        try
+                        {
+                            var resultList = context.PurchaseOrders
+                               .Include(x => x.Vendor)
+                               .Include(x=>x.PurchaseOrderItems)
+                               .Where(e => e.OrganizationId == request.OrganizationId && e.OrderDate >= request.FromDate && e.OrderDate <= request.ToDate)
+                               .Select(x => new PurchaseEnquiryReportModel()
+                               {
+                                   Date = x.OrderDate.ToString(),
+                                   VendorId = x.VendorId,
+                                   VendorName = x.Vendor.Name,
+                                   Amount = x.NetAmount,
+                                   OrderNo = x.PurchaseOrderNo,
+                                   Status = x.OrderStatus,
+                                   WarehouseId = x.PurchaseOrderItems.FirstOrDefault().WarehouseId
+                               })
+                               .ToList();
+                            if (request.Status.HasValue && request.Status > 0)
+                            {
+                                resultList = resultList.Where(x => x.Status == request.Status.Value).ToList();
+                            }
+                            if (request.WarehouseId.HasValue && request.WarehouseId > 0)
+                            {
+                                resultList = resultList.Where(x => x.WarehouseId == request.WarehouseId.Value).ToList();
+                            }
+                            if (request.VendorId.HasValue && request.VendorId > 0)
+                            {
+                                resultList = resultList.Where(x => x.VendorId == request.VendorId.Value).ToList();
+                            }
+                            return CommonUtils.CreateSuccessApiResponse(resultList);
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            ExceptionHandledLogger.Log(ex);
+                            return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ExceptionHandledLogger.Log(ex);
+                return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+            }
+        }
+        #endregion
+
+        #region ItemType
+        [Route("api/StoreAdmin/ListItemTypes")]
+        [HttpGet]
+        public async Task<ApiResponse> GetAllItemTypes()
+        {
+            using (var context = new StoreContext())
+            {
+                var result = context.ItemTypes;
+                return CommonUtils.CreateSuccessApiResponse(await result.ToListAsync());
+            }
+        }
+
+        [Route("api/StoreAdmin/AddItemType")]
+        [HttpPost]
+        public ApiResponse AddItemType(ItemTypes itemType)
+        {
+            try
+            {
+                using (var context = new StoreContext())
+                {
+                    using (var transaction = context.Database.BeginTransaction())
+                    {
+                        try
+                        {
+                            itemType.UpdatedUserId = -1;
+                            itemType.UpdatedDateTime = DateTime.UtcNow;
+                            context.ItemTypes.Add(itemType);
+                            context.SaveChanges();
+
+                            transaction.Commit();
+                            return CommonUtils.CreateSuccessApiResponse(itemType.ItemTypeId);
+                        }
+
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            ExceptionHandledLogger.Log(ex);
+                            return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ExceptionHandledLogger.Log(ex);
+                return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+            }
+        }
+        #endregion
     }
+
 }

@@ -168,6 +168,13 @@
     <Compile Include="Areas\HelpPage\XmlDocumentationProvider.cs" />
     <Compile Include="Controllers\StoreAdminController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
+    <Content Include="DbScripts\ItemTypes.sql" />
+    <Compile Include="DTO\PurchaseEnquiryReportFilter.cs" />
+    <Compile Include="DTO\OnHandReportFilter.cs" />
+    <Compile Include="DTO\ConsumptionReportFilter.cs" />
+    <Compile Include="DTO\PurchaseEnquiryReportModel.cs" />
+    <Compile Include="DTO\OnHandReportModel.cs" />
+    <Compile Include="DTO\ConsumptionReportModel.cs" />
     <Compile Include="ExceptionHandling\ExceptionHandledLogger.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
@@ -188,6 +195,7 @@
     <Compile Include="Models\ItemCategory.cs" />
     <Compile Include="Models\ItemCategoryCollection.cs" />
     <Compile Include="Models\ItemOnHandQty.cs" />
+    <Compile Include="Models\ItemTypes.cs" />
     <Compile Include="Models\Items.cs" />
     <Compile Include="Models\Organization.cs" />
     <Compile Include="Models\OrganizationAddress.cs" />
