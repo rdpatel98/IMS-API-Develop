@@ -3253,9 +3253,9 @@ namespace IMSAPI.Controllers
         #endregion
 
         #region Report
-        [Route("api/StoreAdmin/GetItemCategoryReport")]
+        [Route("api/StoreAdmin/GetConsumptionReport")]
         [HttpPost]
-        public ApiResponse GetItemCategoryReport(ConsumptionReportFilter request)
+        public ApiResponse GetConsumptionReport(ConsumptionReportFilter request)
         {
             try
             {
@@ -3266,34 +3266,101 @@ namespace IMSAPI.Controllers
                         try
                         {
                             var response = new ConsumptionReportModel();
-                            response.Reports = (from item in context.Items
-                                                join conIt in context.ConsumptionItems on item.ItemId equals conIt.ItemId
-                                                join con in context.Consumption on conIt.ConsumptionId equals con.ConsumptionId
-                                                join work in context.Workers on con.WorkerId equals work.WorkerId
-                                                join stock in context.Stocks on item.ItemId equals stock.ItemId
-                                                select new ReportModel()
-                                                {
-                                                    ItemId = item.ItemId,
-                                                    ItemName = item.Name,
-                                                    OnHand = stock.OnHandQuantity.ToString(),
-                                                    Worker = work.Name
-                                                });
-                            response.Reports = context.Items.Where(e => e.Status == 1 && e.OrganizationId == request.OrganizationId).Select(x => new ReportModel()
+                            var con = new SqlConnection(connStr);
+                            con.Open();
+
+                            var sqlQuery = $" ;with cteRowNumber as ( select s.ItemId,  s.OnHandQuantity, s.WarehouseId,Wor.Name, " +
+                            $" row_number() over(partition by s.ItemId , s.WarehouseId order by s.StockId desc) as RowNum from dbo.Stock s " +
+                            $" INNER JOIN dbo.Items i ON i.ItemId = s.ItemId " +
+                            $" Left Join dbo.ConsumptionItems CI on i.ItemId = CI.ItemId " +
+                            $" Left Join dbo.Consumption Con on CI.ConsumptionId = Con.ConsumptionId " +
+                            $" Left Join dbo.Worker Wor on COn.WorkerId = Wor.WorkerId " +
+                            $" where i.OrganizationId = {request.OrganizationId} And s.WarehouseId = {request.WarehouseId} And (s.UpdatedDateTime >= '{request.FromDate.ToString("yyyy-MM-dd")}' And s.UpdatedDateTime <= '{request.ToDate.ToString("yyyy-MM-dd")}'))" +
+                            $" select cte.ItemId, cte.OnHandQuantity , i.Name,iT.ItemTypeId as ItemTypeId,cte.Name as WorkerName from cteRowNumber cte  " +
+                            $" INNER JOIN dbo.Items i ON i.ItemId = cte.ItemId " +
+                            $" Left JOIN dbo.ItemTypes iT ON i.ItemTypeId = iT.ItemTypeId " +
+                            $" INNER JOIN dbo.WareHouse w ON w.WarehouseId = cte.WarehouseId where cte.RowNum = 1 ";
+                            var consumptionReportList = new List<ReportModel>();
+                            using (var command = new SqlCommand(sqlQuery, con))
                             {
-                                ItemId = x.ItemId,
-                                ItemName = x.Name,
-                                OnHand = "",
-                                Worker = ""
-                            });
-                            var resultList = context.Items.Where(e => e.Status == 1 && e.OrganizationId == request.OrganizationId).ToList();
-                            var avgPriceList = GetItemsAvgPrice(request.OrganizationId);
-                            foreach (var item in resultList)
-                            {
-                                var itemDetail = avgPriceList.FirstOrDefault(x => x.ItemId == item.ItemId);
-                                if (itemDetail == null) continue;
-                                item.AvgPrice = itemDetail.AvgPrice;
-                                item.SourceOfOriginName = itemDetail.SourceOfOriginName;
+                                command.CommandType = CommandType.Text;
+                                
+                                using (var reader = command.ExecuteReader())
+                                {
+                                    while (reader.Read())
+                                    {
+                                        var consumptionReport = new ReportModel();
+                                        consumptionReport.ItemId = int.Parse(reader["ItemId"].ToString());
+                                        consumptionReport.ItemName = reader["Name"].ToString();
+                                        consumptionReport.ItemTypeId = reader["ItemTypeId"].ToString();
+                                        consumptionReport.OnHand = reader["OnHandQuantity"].ToString();
+                                        consumptionReport.Worker = reader["WorkerName"].ToString();
+                                        consumptionReport.CategoryData = new List<string>();
+                                        consumptionReportList.Add(consumptionReport);
+                                    }
+                                }
                             }
+                            response.Reports = consumptionReportList;
+
+                            List<ItemCategory> itemCategoryList = GetItemCategories(request.OrganizationId);
+                            response.ItemCategories = itemCategoryList.Select(x => x.CategoryName).ToList();
+                            //foreach (var itemCategory in itemCategoryList)
+                            //{
+
+                            //    response.ItemCategories.Add(itemCategory.CategoryName);
+                            //    var consumptionCategory = new ConsumptionCategory();
+
+                            //    consumptionCategory.CategoryName = itemCategory.CategoryName;
+                            //    consumptionCategory.ItemCategoryId = itemCategory.ItemCategoryId;
+                            //    var itemCollections = GetItemCategoryCollections(itemCategory.ItemCategoryId,request.WarehouseId);
+                            //    var consumptionItemList = new List<ConsumptionItems>();
+                            //    foreach (var item in itemCollections)
+                            //    {
+                            //        var consumptionItem = new ConsumptionItems
+                            //        {
+                            //            UnitId = item.UnitId,
+                            //            ItemId = item.ItemId,
+                            //            ItemName = item.ItemName,
+                            //            OnHandQty = item.OnHandQty,
+                            //            UnitName = item.UnitName,
+                            //            Quantity = 0
+                            //        };
+                            //        consumptionItemList.Add(consumptionItem);
+                            //    }
+
+
+                            //    consumptionCategory.ConsumptionItems = consumptionItemList;
+                            //    //saveItemConsumptionWithCategory.ConsumptionCategory.Add(consumptionCategory);
+                            //}
+
+                            //response.Reports = (from item in context.Items
+                            //                    join conIt in context.ConsumptionItems on item.ItemId equals conIt.ItemId
+                            //                    join con in context.Consumption on conIt.ConsumptionId equals con.ConsumptionId
+                            //                    join work in context.Workers on con.WorkerId equals work.WorkerId
+                            //                    join stock in context.Stocks on item.ItemId equals stock.ItemId
+                            //                    select new ReportModel()
+                            //                    {
+                            //                        ItemId = item.ItemId,
+                            //                        ItemName = item.Name,
+                            //                        OnHand = stock.OnHandQuantity.ToString(),
+                            //                        Worker = work.Name
+                            //                    });
+                            //response.Reports = context.Items.Where(e => e.Status == 1 && e.OrganizationId == request.OrganizationId).Select(x => new ReportModel()
+                            //{
+                            //    ItemId = x.ItemId,
+                            //    ItemName = x.Name,
+                            //    OnHand = "",
+                            //    Worker = ""
+                            //});
+                            //var resultList = context.Items.Where(e => e.Status == 1 && e.OrganizationId == request.OrganizationId).ToList();
+                            //var avgPriceList = GetItemsAvgPrice(request.OrganizationId);
+                            //foreach (var item in resultList)
+                            //{
+                            //    var itemDetail = avgPriceList.FirstOrDefault(x => x.ItemId == item.ItemId);
+                            //    if (itemDetail == null) continue;
+                            //    item.AvgPrice = itemDetail.AvgPrice;
+                            //    item.SourceOfOriginName = itemDetail.SourceOfOriginName;
+                            //}
                             return CommonUtils.CreateSuccessApiResponse(response);
                         }
                         catch (Exception ex)

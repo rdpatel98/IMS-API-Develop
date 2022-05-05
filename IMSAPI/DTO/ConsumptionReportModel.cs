@@ -7,7 +7,7 @@ namespace IMSAPI.DTO
 {
     public class ConsumptionReportModel
     {
-        public IQueryable<ReportModel> Reports { get; set; }
+        public List<ReportModel> Reports { get; set; }
         public List<string> ItemCategories { get; set; }
     }
 
@@ -16,7 +16,9 @@ namespace IMSAPI.DTO
         public int ItemId { get; set; }
         public string ItemName { get; set; }
         public string OnHand { get; set; }
+        public string ItemTypeId { get; set; }
         public string Worker { get; set; }
+        public List<string> CategoryData { get; set; }
     }
 
     public class ItemCategories
