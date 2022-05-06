@@ -1,4 +1,5 @@
 ﻿using System.Web.Http;
+using Microsoft.Owin.Security.OAuth;
 using System.Web.Http.Cors;
 
 namespace IMSAPI
@@ -12,6 +13,10 @@ namespace IMSAPI
             EnableCorsAttribute cors = new EnableCorsAttribute("*", headers: "*", methods: "*");
             config.EnableCors(cors);
 #endif
+
+            config.SuppressDefaultHostAuthentication();
+            config.Filters.Add(new HostAuthenticationFilter(OAuthDefaults.AuthenticationType));
+
 
             // Web API routes
             config.MapHttpAttributeRoutes();
