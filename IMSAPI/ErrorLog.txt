@@ -548,3 +548,53 @@ StackTrace :    at System.Data.SqlClient.SqlConnection.OnError(SqlException exce
    at System.Data.Entity.Core.Mapping.Update.Internal.DynamicUpdateCommand.Execute(Dictionary`2 identifierValues, List`1 generatedValues)
    at System.Data.Entity.Core.Mapping.Update.Internal.UpdateTranslator.Update()
 -----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+Date : 09/05/2022 08:16:48
+
+System.IndexOutOfRangeException
+Message : CategoryName
+StackTrace :    at System.Data.ProviderBase.FieldNameLookup.GetOrdinal(String fieldName)
+   at System.Data.SqlClient.SqlDataReader.GetOrdinal(String name)
+   at System.Data.SqlClient.SqlDataReader.get_Item(String name)
+   at IMSAPI.Controllers.StoreAdminController.GetConsumptionReport(ConsumptionReportFilter request) in D:\Nikhil\Personal\IMS\IMS-API-Develop\IMSAPI\Controllers\StoreAdminController.cs:line 3417
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+Date : 09/05/2022 08:17:37
+
+System.IndexOutOfRangeException
+Message : CategoryName
+StackTrace :    at System.Data.ProviderBase.FieldNameLookup.GetOrdinal(String fieldName)
+   at System.Data.SqlClient.SqlDataReader.GetOrdinal(String name)
+   at System.Data.SqlClient.SqlDataReader.get_Item(String name)
+   at IMSAPI.Controllers.StoreAdminController.GetConsumptionReport(ConsumptionReportFilter request) in D:\Nikhil\Personal\IMS\IMS-API-Develop\IMSAPI\Controllers\StoreAdminController.cs:line 3417
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+Date : 09/05/2022 08:18:06
+
+System.IndexOutOfRangeException
+Message : Quantity
+StackTrace :    at System.Data.ProviderBase.FieldNameLookup.GetOrdinal(String fieldName)
+   at System.Data.SqlClient.SqlDataReader.GetOrdinal(String name)
+   at System.Data.SqlClient.SqlDataReader.get_Item(String name)
+   at IMSAPI.Controllers.StoreAdminController.GetConsumptionReport(ConsumptionReportFilter request) in D:\Nikhil\Personal\IMS\IMS-API-Develop\IMSAPI\Controllers\StoreAdminController.cs:line 3419
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+Date : 09/05/2022 08:28:19
+
+System.IndexOutOfRangeException
+Message : Name
+StackTrace :    at System.Data.ProviderBase.FieldNameLookup.GetOrdinal(String fieldName)
+   at System.Data.SqlClient.SqlDataReader.GetOrdinal(String name)
+   at System.Data.SqlClient.SqlDataReader.get_Item(String name)
+   at IMSAPI.Controllers.StoreAdminController.GetConsumptionReport(ConsumptionReportFilter request) in D:\Nikhil\Personal\IMS\IMS-API-Develop\IMSAPI\Controllers\StoreAdminController.cs:line 3448
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+Date : 09/05/2022 08:28:20
+
+System.IndexOutOfRangeException
+Message : Name
+StackTrace :    at System.Data.ProviderBase.FieldNameLookup.GetOrdinal(String fieldName)
+   at System.Data.SqlClient.SqlDataReader.GetOrdinal(String name)
+   at System.Data.SqlClient.SqlDataReader.get_Item(String name)
+   at IMSAPI.Controllers.StoreAdminController.GetConsumptionReport(ConsumptionReportFilter request) in D:\Nikhil\Personal\IMS\IMS-API-Develop\IMSAPI\Controllers\StoreAdminController.cs:line 3448
+-----------------------------------------------------------------------------
