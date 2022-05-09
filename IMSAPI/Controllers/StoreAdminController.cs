@@ -3425,11 +3425,14 @@ namespace IMSAPI.Controllers
 
 
                         var items = new List<ReportModel>();
-                        var itemsSqlQuery = $" ;with cteRowNumber as ( select s.ItemId,  s.OnHandQuantity, s.WarehouseId, " +
+                        var itemsSqlQuery = $" ;with cteRowNumber as ( select s.ItemId,  s.OnHandQuantity, s.WarehouseId, Wor.Name, " +
                              $" row_number() over(partition by s.ItemId , s.WarehouseId order by s.StockId desc) as RowNum from dbo.Stock s " +
-                             $" INNER JOIN dbo.Items i ON i.ItemId = s.ItemId )" +
-                             //$" where i.OrganizationId = {request.OrganizationId} And s.WarehouseId = {request.WarehouseId} And (s.UpdatedDateTime >= '{request.FromDate.ToString("yyyy-MM-dd")}' And s.UpdatedDateTime <= '{request.ToDate.ToString("yyyy-MM-dd")}'))" +
-                             $" select cte.ItemId, cte.OnHandQuantity , i.Name,iT.ItemTypeId as ItemTypeId from cteRowNumber cte  " +
+                             $" INNER JOIN dbo.Items i ON i.ItemId = s.ItemId" +
+                             $" Left Join dbo.ConsumptionItems CI on i.ItemId = CI.ItemId" +
+                             $" Left Join dbo.Consumption Co on CI.ConsumptionId = Co.ConsumptionId" +
+                             $" Left Join dbo.Worker Wor on Co.WorkerId = Wor.WorkerId" +
+                             $" where i.OrganizationId = {request.OrganizationId} And s.WarehouseId = {request.WarehouseId} And (s.UpdatedDateTime >= '{request.FromDate.ToString("yyyy-MM-dd")}' And s.UpdatedDateTime <= '{request.ToDate.ToString("yyyy-MM-dd")}'))" +
+                             $" select cte.ItemId, cte.OnHandQuantity , i.Name,iT.ItemTypeId as ItemTypeId,cte.Name as WorkerName from cteRowNumber cte  " +
                              $" INNER JOIN dbo.Items i ON i.ItemId = cte.ItemId " +
                              $" Left JOIN dbo.ItemTypes iT ON i.ItemTypeId = iT.ItemTypeId " +
                              $" INNER JOIN dbo.WareHouse w ON w.WarehouseId = cte.WarehouseId where cte.RowNum = 1 ";
@@ -3448,6 +3451,7 @@ namespace IMSAPI.Controllers
                                     report.ItemName = reader["Name"].ToString();
                                     report.ItemTypeId = reader["ItemTypeId"].ToString();
                                     report.OnHand = reader["OnHandQuantity"].ToString();
+                                    report.Worker = reader["WorkerName"].ToString();
                                     var itemCategoryData = itemCategories.Where(x => x.ItemId == report.ItemId);
                                     report.TotalConsumptions = itemCategoryData.Sum(x => x.Quantity);
                                     report.CategoryData = itemCategoryData;
@@ -3455,7 +3459,15 @@ namespace IMSAPI.Controllers
                                 }
                             }
                         }
-
+                        if (request.ItemType.HasValue && request.ItemType > 0)
+                        {
+                            items = items.Where(x => x.ItemTypeId == request.ItemType.Value.ToString()).ToList();
+                        }
+                        if (request.WorkerId.HasValue && request.WorkerId > 0)
+                        {
+                            var worker = context.Workers.FirstOrDefault(x => x.WorkerId == request.WorkerId.Value);
+                            items = items.Where(x => x.Worker == worker.Name).ToList();
+                        }
                         response.Reports = items;
                         response.ItemCategories = itemCategories.GroupBy(x => new { x.ItemCategoryId, x.CategoryName, x.CategoryId }).Select(x => new ItemCategoryHeader()
                         {
