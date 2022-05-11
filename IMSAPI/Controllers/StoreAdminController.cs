@@ -3670,6 +3670,90 @@ namespace IMSAPI.Controllers
                 return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
             }
         }
+
+        [Route("api/StoreAdmin/GetItemTypeByID")]
+        [HttpGet]
+        public ApiResponse GetItemTypeById(int itemTypeid)
+        {
+            using (var context = new StoreContext())
+            {
+                try
+                {
+                    var itemType = context.ItemTypes.FirstOrDefault(e => e.ItemTypeId == itemTypeid);
+                    return CommonUtils.CreateSuccessApiResponse(itemType);
+                }
+                catch (Exception ex)
+                {
+                    return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+                }
+            }
+        }
+
+        [Route("api/StoreAdmin/DeleteItemType")]
+        [HttpPost]
+        public ApiResponse DeleteItemType(int itemTypeid)
+        {
+            try
+            {
+                using (var context = new StoreContext())
+                {
+                    using (var transaction = context.Database.BeginTransaction())
+                    {
+                        try
+                        {
+                            var itemType = context.ItemTypes.FirstOrDefault(e => e.ItemTypeId == itemTypeid);
+                            if (itemType != null)
+                            {
+                                context.ItemTypes.Remove(itemType);
+                                context.SaveChanges();
+                            }
+
+                            transaction.Commit();
+
+                            return CommonUtils.CreateSuccessApiResponse(itemTypeid);
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            ExceptionHandledLogger.Log(ex);
+                            return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ExceptionHandledLogger.Log(ex);
+                return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+            }
+        }
+
+        [Route("api/StoreAdmin/UpdateItemType")]
+        [HttpPost]
+        public ApiResponse UpdateItemType(ItemTypes objItemType)
+        {
+            using (var context = new StoreContext())
+            {
+                using (var transaction = context.Database.BeginTransaction())
+                {
+                    try
+                    {
+                        var itemType = context.ItemTypes.FirstOrDefault(e => e.ItemTypeId == objItemType.ItemTypeId);
+                        itemType.ItemTypeId = objItemType.ItemTypeId;
+                        itemType.Name = objItemType.Name;
+                        context.SaveChanges();
+
+                        transaction.Commit();
+                        return CommonUtils.CreateSuccessApiResponse(objItemType);
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+                    }
+                }
+            }
+        }
         #endregion
     }
 
