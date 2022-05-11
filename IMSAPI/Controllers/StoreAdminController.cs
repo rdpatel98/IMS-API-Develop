@@ -1887,6 +1887,56 @@ namespace IMSAPI.Controllers
             }
         }
 
+        [Route("api/StoreAdmin/DeleteItemCategory/{categoryId}/{itemCategoryId}")]
+        [HttpDelete]
+        public ApiResponse DeleteItemCategory(int itemCategoryId, int categoryId)
+        {
+            try
+            {
+                using (var context = new StoreContext())
+                {
+                    using (var transaction = context.Database.BeginTransaction())
+                    {
+                        try
+                        {
+                            var itemCategory = context.ItemCategory.FirstOrDefault(e =>
+                                e.ItemCategoryId == itemCategoryId && e.CategoryId == categoryId);
+                            context.ItemCategory.Remove(itemCategory);
+                            context.SaveChanges();
+
+                            //Delete the item collection
+                            var itemCategoryCollectionList = context.ItemCategoryCollection.Where(x => x.CategoryId == categoryId
+                                                                                                       && x.ItemCategoryId == itemCategoryId).ToList();
+                            foreach (var relation in itemCategoryCollectionList)
+                            {
+                                var itemCollection = context.ItemCategoryCollection.FirstOrDefault(e => e.ItemCategoryId == relation.ItemCategoryId
+                                                                                                    && e.ItemId == relation.ItemId && e.CategoryId == relation.CategoryId);
+                                if (itemCollection != null)
+                                {
+                                    context.ItemCategoryCollection.Remove(itemCollection);
+                                    context.SaveChanges();
+                                }
+                            }
+
+                            transaction.Commit();
+                            return CommonUtils.CreateSuccessApiResponse(true);
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            ExceptionHandledLogger.Log(ex);
+                            return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ExceptionHandledLogger.Log(ex);
+                return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+            }
+        }
+
         [Route("api/StoreAdmin/GetItemsWithCategoryByWarehouseId")]
         [HttpGet]
         public ApiResponse GetItemsWithCategoryByWarehouseId(int warehouseId, int organizationId)
