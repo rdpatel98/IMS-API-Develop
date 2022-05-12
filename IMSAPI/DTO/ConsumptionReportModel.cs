@@ -18,6 +18,7 @@ namespace IMSAPI.DTO
         public string OnHand { get; set; }
         public string ItemTypeId { get; set; }
         public string Worker { get; set; }
+        public int WorkerId { get; set; }
         public int TotalConsumptions { get; set; }
         public IEnumerable<ItemCategories> CategoryData { get; set; }
     }
@@ -29,6 +30,7 @@ namespace IMSAPI.DTO
         public int ItemId { get; set; }
         public int ItemCategoryId { get; set; }
         public int CategoryId { get; set; }
+        public int WorkerId { get; set; }
     }
     public class ItemCategoryHeader
     {

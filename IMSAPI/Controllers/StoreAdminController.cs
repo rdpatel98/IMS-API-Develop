@@ -3446,14 +3446,14 @@ namespace IMSAPI.Controllers
                     {
                         var response = new ConsumptionReportModel();
 
-                        var sqlQuery = $"Select C.Name as CategoryName,IC.CategoryId,IC.ItemCategoryId,ICC.ItemId,SUM(CI.Quantity) as Quantity From Category C "
+                        var sqlQuery = $"Select C.Name as CategoryName,IC.CategoryId,IC.ItemCategoryId,ICC.ItemId,SUM(CI.Quantity) as Quantity, CON.WorkerId as WorkerId From Category C "
                                         + $"JOIN ItemCategory IC ON C.CategoryId = IC.CategoryId "
                                         + $"JOIN ItemCategoryCollection ICC ON IC.ItemCategoryId = ICC.ItemCategoryId AND IC.CategoryId = ICC.CategoryId "
                                         + $"JOIN ConsumptionItems CI ON ICC.ItemId = CI.ItemId "
                                         + $"JOIN Consumption CON ON CI.ConsumptionId = CON.ConsumptionId "
                                         + $"Where C.Status = 1 And IC.Status = 1 AND CON.Status = 1"
                                         + $"And (CON.UpdatedDateTime >= '{request.FromDate.ToString("yyyy-MM-dd HH:mm")}' And CON.UpdatedDateTime <= '{request.ToDate.ToString("yyyy-MM-dd HH:mm")}')"
-                                        + $"Group By C.Name,IC.CategoryId,IC.ItemCategoryId,ICC.ItemId ";
+                                        + $"Group By C.Name,IC.CategoryId,IC.ItemCategoryId,ICC.ItemId,CON.WOrkerId ";
 
 
                         var itemCategories = new List<ItemCategories>();
@@ -3471,6 +3471,7 @@ namespace IMSAPI.Controllers
                                     itemCategory.ItemCategoryId = int.Parse(reader["ItemCategoryId"].ToString());
                                     itemCategory.Quantity = int.Parse(reader["Quantity"].ToString());
                                     itemCategory.CategoryId = int.Parse(reader["CategoryId"].ToString());
+                                    itemCategory.WorkerId = int.Parse(reader["WorkerId"].ToString());
                                     itemCategories.Add(itemCategory);
                                 }
                             }
@@ -3478,17 +3479,28 @@ namespace IMSAPI.Controllers
 
 
                         var items = new List<ReportModel>();
-                        var itemsSqlQuery = $" ;with cteRowNumber as ( select s.ItemId,  s.OnHandQuantity, s.WarehouseId, Wor.Name, " +
-                             $" row_number() over(partition by s.ItemId , s.WarehouseId order by s.StockId desc) as RowNum from dbo.Stock s " +
-                             $" INNER JOIN dbo.Items i ON i.ItemId = s.ItemId" +
-                             $" Left Join dbo.ConsumptionItems CI on i.ItemId = CI.ItemId" +
-                             $" Left Join dbo.Consumption Co on CI.ConsumptionId = Co.ConsumptionId" +
-                             $" Left Join dbo.Worker Wor on Co.WorkerId = Wor.WorkerId" +
-                             $" where i.OrganizationId = {request.OrganizationId} And s.WarehouseId = {request.WarehouseId} And (Co.UpdatedDateTime >= '{request.FromDate.ToString("yyyy-MM-dd HH:mm")}' And Co.UpdatedDateTime <= '{request.ToDate.ToString("yyyy-MM-dd HH:mm")}'))" +
-                             $" select cte.ItemId, cte.OnHandQuantity , i.Name,iT.ItemTypeId as ItemTypeId,cte.Name as WorkerName from cteRowNumber cte  " +
-                             $" INNER JOIN dbo.Items i ON i.ItemId = cte.ItemId " +
-                             $" Left JOIN dbo.ItemTypes iT ON i.ItemTypeId = iT.ItemTypeId " +
-                             $" INNER JOIN dbo.WareHouse w ON w.WarehouseId = cte.WarehouseId where cte.RowNum = 1 ";
+                        //var itemsSqlQuery = $" ;with cteRowNumber as ( select s.ItemId,  s.OnHandQuantity, s.WarehouseId, Wor.Name, Wor.WorkerId, " +
+                        //     $" row_number() over(partition by s.ItemId , s.WarehouseId order by s.StockId desc) as RowNum from dbo.Stock s " +
+                        //     $" INNER JOIN dbo.Items i ON i.ItemId = s.ItemId" +
+                        //     $" Left Join dbo.ConsumptionItems CI on i.ItemId = CI.ItemId" +
+                        //     $" Left Join dbo.Consumption Co on CI.ConsumptionId = Co.ConsumptionId" +
+                        //     $" Left Join dbo.Worker Wor on Co.WorkerId = Wor.WorkerId" +
+                        //     $" where i.OrganizationId = {request.OrganizationId} And s.WarehouseId = {request.WarehouseId} And (Co.UpdatedDateTime >= '{request.FromDate.ToString("yyyy-MM-dd HH:mm")}' And Co.UpdatedDateTime <= '{request.ToDate.ToString("yyyy-MM-dd HH:mm")}'))" +
+                        //     $" select cte.ItemId, cte.OnHandQuantity , i.Name,iT.ItemTypeId as ItemTypeId,cte.Name as WorkerName, cte.WorkerId as WorkerId  from cteRowNumber cte  " +
+                        //     $" INNER JOIN dbo.Items i ON i.ItemId = cte.ItemId " +
+                        //     $" Left JOIN dbo.ItemTypes iT ON i.ItemTypeId = iT.ItemTypeId " +
+                        //     $" INNER JOIN dbo.WareHouse w ON w.WarehouseId = cte.WarehouseId where cte.RowNum = 1 ";
+
+                        var itemsSqlQuery = $"Select I.ItemId,S.OnHandQuantity,I.Name,IT.ItemTypeId,WOR.Name as WorkerName,WOR.WorkerId From dbo.Items I "
+                                            + $"JOIN(Select row_number() over(partition by ItemId, WarehouseId order by StockId desc) as RowNum, * From Stock) S ON I.ItemId = S.ItemId AND S.RowNum = 1 "
+                                            + $"LEFT JOIN ConsumptionItems CI ON I.ItemId = CI.ItemId "
+                                            + $"LEFT JOIN Consumption CO ON CI.ConsumptionId = CO.ConsumptionId "
+                                            + $"LEFT JOIN Worker WOR ON CO.WorkerId = WOR.WorkerId "
+                                            + $"JOIN dbo.Warehouse W ON S.WarehouseId = W.WarehouseId "
+                                            + $"LEFT JOIN dbo.ItemTypes IT ON I.ItemTypeId = IT.ItemTypeId "
+                                            + $"WHERE I.OrganizationId = {request.OrganizationId} And S.WarehouseId = {request.WarehouseId} And (CO.UpdatedDateTime >= '{request.FromDate.ToString("yyyy-MM-dd HH:mm")}' And CO.UpdatedDateTime <= '{request.ToDate.ToString("yyyy-MM-dd HH:mm")}') "
+                                            + $"GROUP BY I.ItemId,S.OnHandQuantity,I.Name,IT.ItemTypeId,WOR.Name,WOR.WorkerId ";
+
 
 
                         using (var command = new SqlCommand(itemsSqlQuery, con))
@@ -3505,7 +3517,8 @@ namespace IMSAPI.Controllers
                                     report.ItemTypeId = reader["ItemTypeId"].ToString();
                                     report.OnHand = reader["OnHandQuantity"].ToString();
                                     report.Worker = reader["WorkerName"].ToString();
-                                    var itemCategoryData = itemCategories.Where(x => x.ItemId == report.ItemId);
+                                    report.WorkerId = int.Parse(reader["WorkerId"].ToString());
+                                    var itemCategoryData = itemCategories.Where(x => x.ItemId == report.ItemId && x.WorkerId == report.WorkerId);
                                     report.TotalConsumptions = itemCategoryData.Sum(x => x.Quantity);
                                     report.CategoryData = itemCategoryData;
                                     items.Add(report);
