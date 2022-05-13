@@ -2738,6 +2738,7 @@ namespace IMSAPI.Controllers
                                     count++;
                                     consumptionItem.LineNo = count.ToString();
                                     consumptionItem.UpdatedUserId = -1;
+                                    consumptionItem.ItemCategoryId = consumptionCategory.ItemCategoryId;
                                     consumptionItem.UpdatedDateTime = DateTime.UtcNow;
                                     consumptionItem.ConsumptionId = saveItemConsumption.Consumption.ConsumptionId;
                                     context.ConsumptionItems.Add(consumptionItem);
