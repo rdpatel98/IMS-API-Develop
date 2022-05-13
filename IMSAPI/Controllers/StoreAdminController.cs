@@ -3450,7 +3450,7 @@ namespace IMSAPI.Controllers
                         var sqlQuery = $"Select C.Name as CategoryName,IC.CategoryId,IC.ItemCategoryId,ICC.ItemId,SUM(CI.Quantity) as Quantity, CON.WorkerId as WorkerId From Category C "
                                         + $"JOIN ItemCategory IC ON C.CategoryId = IC.CategoryId "
                                         + $"JOIN ItemCategoryCollection ICC ON IC.ItemCategoryId = ICC.ItemCategoryId AND IC.CategoryId = ICC.CategoryId "
-                                        + $"JOIN ConsumptionItems CI ON ICC.ItemId = CI.ItemId "
+                                        + $"JOIN ConsumptionItems CI ON ICC.ItemId = CI.ItemId  AND CI.ItemCategoryId=IC.ItemCategoryId "
                                         + $"JOIN Consumption CON ON CI.ConsumptionId = CON.ConsumptionId "
                                         + $"Where C.Status = 1 And IC.Status = 1 AND CON.Status = 1"
                                         + $"And (CON.UpdatedDateTime >= '{request.FromDate.ToString("yyyy-MM-dd HH:mm")}' And CON.UpdatedDateTime <= '{request.ToDate.ToString("yyyy-MM-dd HH:mm")}')"
