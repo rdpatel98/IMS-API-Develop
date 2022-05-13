@@ -3613,9 +3613,9 @@ namespace IMSAPI.Controllers
                             {
                                 onHandReportList = onHandReportList.Where(x => x.ItemTypeId == request.ItemType.Value.ToString()).ToList();
                             }
-                            if (request.ItemMaster != null && !string.IsNullOrEmpty(request.ItemMaster))
+                            if (request.ItemMasterId.HasValue && request.ItemMasterId > 0)
                             {
-                                onHandReportList = onHandReportList.Where(x => x.ItemName.ToLower().Contains(request.ItemMaster.ToLower())).ToList();
+                                onHandReportList = onHandReportList.Where(x => x.ItemId == request.ItemMasterId).ToList();
                             }
                             con.Close();
                             return CommonUtils.CreateSuccessApiResponse(onHandReportList);
