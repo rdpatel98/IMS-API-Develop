@@ -3570,8 +3570,8 @@ namespace IMSAPI.Controllers
         {
             try
             {
-                request.FromDate = request.FromDate.Date.AddMinutes(1).AddSeconds(59);
-                request.ToDate = request.ToDate.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+                //request.FromDate = request.FromDate.Date.AddMinutes(1).AddSeconds(59);
+                //request.ToDate = request.ToDate.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
                 using (var context = new StoreContext())
                 {
                     using (var transaction = context.Database.BeginTransaction())
@@ -3586,7 +3586,7 @@ namespace IMSAPI.Controllers
                             var sqlQuery = $" ;with cteRowNumber as ( select s.ItemId,  s.OnHandQuantity, s.WarehouseId, " +
                             $" row_number() over(partition by s.ItemId , s.WarehouseId order by s.StockId desc) as RowNum from dbo.Stock s " +
                             $" INNER JOIN dbo.Items i ON i.ItemId = s.ItemId " +
-                            $" where i.OrganizationId = {request.OrganizationId} And s.WarehouseId = {request.WarehouseId} And (i.UpdatedDateTime >= '{request.FromDate.ToString("yyyy-MM-dd HH:mm")}' And i.UpdatedDateTime <= '{request.ToDate.ToString("yyyy-MM-dd HH:mm")}'))" +
+                            $" where i.OrganizationId = {request.OrganizationId} And s.WarehouseId = {request.WarehouseId})" +
                             $" select cte.ItemId, cte.OnHandQuantity , i.Name,iT.ItemTypeId as ItemTypeId from cteRowNumber cte  " +
                             $" INNER JOIN dbo.Items i ON i.ItemId = cte.ItemId " +
                             $" Left JOIN dbo.ItemTypes iT ON i.ItemTypeId = iT.ItemTypeId " +
@@ -3613,6 +3613,10 @@ namespace IMSAPI.Controllers
                             if (request.ItemType.HasValue && request.ItemType > 0)
                             {
                                 onHandReportList = onHandReportList.Where(x => x.ItemTypeId == request.ItemType.Value.ToString()).ToList();
+                            }
+                            if (request.ItemMasterId.HasValue && request.ItemMasterId > 0)
+                            {
+                                onHandReportList = onHandReportList.Where(x => x.ItemId == request.ItemMasterId).ToList();
                             }
                             con.Close();
                             return CommonUtils.CreateSuccessApiResponse(onHandReportList);
