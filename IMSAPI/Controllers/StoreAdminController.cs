@@ -3643,6 +3643,8 @@ namespace IMSAPI.Controllers
         {
             try
             {
+                request.FromDate = request.FromDate.Date.AddMinutes(1).AddSeconds(59);
+                request.ToDate = request.ToDate.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
                 using (var context = new StoreContext())
                 {
                     using (var transaction = context.Database.BeginTransaction())
