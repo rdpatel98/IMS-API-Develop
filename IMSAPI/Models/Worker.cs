@@ -23,6 +23,7 @@ namespace IMSAPI.Models
         public short Status { get; set; }
         public bool IsBlocked { get; set; }
         public int OrganizationId { get; set; }
+        public string UserMasterId { get; set; }
 
     }
 }

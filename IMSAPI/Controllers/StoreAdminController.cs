@@ -15,6 +15,7 @@ using IMSAPI.Models.UnboxFutureContext;
 
 namespace IMSAPI.Controllers
 {
+    [Authorize]
     public class StoreAdminController : ApiController
     {
         public string connStr = ConfigurationManager.ConnectionStrings["StoreContext"].ConnectionString;

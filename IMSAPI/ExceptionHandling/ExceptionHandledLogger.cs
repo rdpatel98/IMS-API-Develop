@@ -7,11 +7,11 @@ using System.Web.Http.ExceptionHandling;
 
 namespace IMSAPI.ExceptionHandling
 {
-    public static class ExceptionHandledLogger 
+    public static class ExceptionHandledLogger
     {
         public static void Log(Exception ex)
         {
-            string filePath = System.Web.Hosting.HostingEnvironment.MapPath("~/ErrorLog.txt"); 
+            string filePath = System.Web.Hosting.HostingEnvironment.MapPath("~/ErrorLog.txt");
 
             using (StreamWriter writer = new StreamWriter(filePath, true))
             {
@@ -30,6 +30,6 @@ namespace IMSAPI.ExceptionHandling
 
         }
 
-      
+
     }
 }
