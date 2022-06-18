@@ -10,7 +10,7 @@ using Microsoft.Owin;
 
 namespace IMSAPI.Models.UnboxFutureContext
 {
-    public class StoreContext : IdentityDbContext<ApplicationUser>
+    public class StoreContext : IdentityDbContext<ApplicationUser, IdentityRole<int, IdentityUserRole<int>>, int, IdentityUserLogin<int>, IdentityUserRole<int>, IdentityUserClaim<int>>
     {
         public StoreContext()
             : base("name=StoreContext")
