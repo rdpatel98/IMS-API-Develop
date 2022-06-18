@@ -9,7 +9,7 @@ using System.Web.Http;
 using System.Web.Http.ModelBinding;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
-using Microsoft.AspNet.Identity.Owin;
+using Microsoft.AspNet.Identity.Owin;   
 using Microsoft.Owin.Security;
 using Microsoft.Owin.Security.Cookies;
 using Microsoft.Owin.Security.OAuth;
@@ -59,13 +59,14 @@ namespace IMSAPI.Controllers
         public UserInfoViewModel GetUserInfo()
         {
             ExternalLoginData externalLogin = ExternalLoginData.FromIdentity(User.Identity as ClaimsIdentity);
-            var context = new StoreContext();            
-            var org = context.Organizations.FirstOrDefault(x => x.OrganizationId == worker.OrganizationId);
+            var context = new StoreContext();
+            var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+            var org = context.Organizations.FirstOrDefault(x => x.OrganizationId == user.OrganizationId);
             var userDetail = new UserDetail
             {
-                OrganizationId = worker.OrganizationId,
-                UserId = worker.WorkerId,
-                UserName = worker.Name,
+                OrganizationId = user.OrganizationId.Value,
+                UserId = user.Id,
+                UserName = user.UserName,
                 DefaultWarehouseId = Convert.ToInt32(org?.TransactionalWarehouseId)
             };
             return new UserInfoViewModel
@@ -88,7 +89,7 @@ namespace IMSAPI.Controllers
         [Route("ManageInfo")]
         public async Task<ManageInfoViewModel> GetManageInfo(string returnUrl, bool generateState = false)
         {
-            IdentityUser user = await UserManager.FindByIdAsync(User.Identity.GetUserId());
+            var user = await UserManager.FindByIdAsync(Convert.ToInt32(User.Identity.GetUserId()));
 
             if (user == null)
             {
@@ -97,7 +98,7 @@ namespace IMSAPI.Controllers
 
             List<UserLoginInfoViewModel> logins = new List<UserLoginInfoViewModel>();
 
-            foreach (IdentityUserLogin linkedAccount in user.Logins)
+            foreach (var linkedAccount in user.Logins)
             {
                 logins.Add(new UserLoginInfoViewModel
                 {
@@ -133,7 +134,7 @@ namespace IMSAPI.Controllers
                 return BadRequest(ModelState);
             }
 
-            IdentityResult result = await UserManager.ChangePasswordAsync(User.Identity.GetUserId(), model.OldPassword,
+            IdentityResult result = await UserManager.ChangePasswordAsync(Convert.ToInt32(User.Identity.GetUserId()), model.OldPassword,
                 model.NewPassword);
             
             if (!result.Succeeded)
@@ -153,7 +154,7 @@ namespace IMSAPI.Controllers
                 return BadRequest(ModelState);
             }
 
-            IdentityResult result = await UserManager.AddPasswordAsync(User.Identity.GetUserId(), model.NewPassword);
+            IdentityResult result = await UserManager.AddPasswordAsync(Convert.ToInt32(User.Identity.GetUserId()), model.NewPassword);
 
             if (!result.Succeeded)
             {
@@ -190,7 +191,7 @@ namespace IMSAPI.Controllers
                 return BadRequest("The external login is already associated with an account.");
             }
 
-            IdentityResult result = await UserManager.AddLoginAsync(User.Identity.GetUserId(),
+            IdentityResult result = await UserManager.AddLoginAsync(Convert.ToInt32(User.Identity.GetUserId()),
                 new UserLoginInfo(externalData.LoginProvider, externalData.ProviderKey));
 
             if (!result.Succeeded)
@@ -214,11 +215,11 @@ namespace IMSAPI.Controllers
 
             if (model.LoginProvider == LocalLoginProvider)
             {
-                result = await UserManager.RemovePasswordAsync(User.Identity.GetUserId());
+                result = await UserManager.RemovePasswordAsync(Convert.ToInt32(User.Identity.GetUserId()));
             }
             else
             {
-                result = await UserManager.RemoveLoginAsync(User.Identity.GetUserId(),
+                result = await UserManager.RemoveLoginAsync(Convert.ToInt32(User.Identity.GetUserId()),
                     new UserLoginInfo(model.LoginProvider, model.ProviderKey));
             }
 
