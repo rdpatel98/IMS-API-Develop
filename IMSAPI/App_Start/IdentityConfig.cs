@@ -19,7 +19,7 @@ namespace IMSAPI
 
         public static ApplicationUserManager Create(IdentityFactoryOptions<ApplicationUserManager> options, IOwinContext context)
         {
-            var manager = new ApplicationUserManager(new UserStore<ApplicationUser, IdentityRole<int, IdentityUserRole<int>>, int, IdentityUserLogin<int>, IdentityUserRole<int>, IdentityUserClaim<int>>(context.Get<StoreContext>()));
+            var manager = new ApplicationUserManager(new UserStore<ApplicationUser, AppRole, int, AppUserLogin, AppUserRole, AppUserClaim>(context.Get<StoreContext>()));
             // Configure validation logic for usernames
             manager.UserValidator = new UserValidator<ApplicationUser, int>(manager)
             {
@@ -41,6 +41,18 @@ namespace IMSAPI
                 manager.UserTokenProvider = new DataProtectorTokenProvider<ApplicationUser, int>(dataProtectionProvider.Create("ASP.NET Identity"));
             }
             return manager;
+        }
+    }
+    public class ApplicationRoleManager : RoleManager<AppRole, int>
+    {
+        public ApplicationRoleManager(IRoleStore<AppRole, int> roleStore)
+            : base(roleStore)
+        {
+        }
+
+        public static ApplicationRoleManager Create(IdentityFactoryOptions<ApplicationRoleManager> options, IOwinContext context)
+        {
+            return new ApplicationRoleManager(new RoleStore<AppRole, int, AppUserRole>(context.Get<StoreContext>()));
         }
     }
 }

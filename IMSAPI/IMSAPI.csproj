@@ -19,9 +19,9 @@
     <UseIISExpress>true</UseIISExpress>
     <Use64BitIISExpress />
     <IISExpressSSLPort>44341</IISExpressSSLPort>
-    <IISExpressAnonymousAuthentication />
-    <IISExpressWindowsAuthentication />
-    <IISExpressUseClassicPipelineMode />
+    <IISExpressAnonymousAuthentication>enabled</IISExpressAnonymousAuthentication>
+    <IISExpressWindowsAuthentication>disabled</IISExpressWindowsAuthentication>
+    <IISExpressUseClassicPipelineMode>false</IISExpressUseClassicPipelineMode>
     <UseGlobalApplicationHostFile />
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
@@ -46,6 +46,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.Owin.Cors, Version=4.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Owin.Cors.4.0.1\lib\net45\Microsoft.Owin.Cors.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -211,19 +214,40 @@
     <Compile Include="Areas\HelpPage\SampleGeneration\SampleDirection.cs" />
     <Compile Include="Areas\HelpPage\SampleGeneration\TextSample.cs" />
     <Compile Include="Areas\HelpPage\XmlDocumentationProvider.cs" />
+    <Compile Include="Common\IMS-Const.cs" />
     <Compile Include="Controllers\AccountController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
+    <Compile Include="Controllers\PermissionEntitiesController.cs" />
+    <Compile Include="Controllers\PermissionEntityLookUpsController.cs" />
+    <Compile Include="Controllers\RolePermissionEntityLookUpsController.cs" />
+    <Compile Include="Controllers\LookUpsController.cs" />
+    <Compile Include="Controllers\WorkersController.cs" />
+    <Compile Include="Controllers\RolesController.cs" />
     <Compile Include="Controllers\StoreAdminController.cs" />
     <Compile Include="Controllers\ValuesController.cs" />
+    <Compile Include="Dto\CreatePermissionEntities\CreatePermissionEntity.cs" />
+    <Compile Include="Dto\LookUps\CreateLookUp.cs" />
+    <Compile Include="Dto\PermissionEntityLookUps\CreatePermissionEntityLookUp.cs" />
+    <Compile Include="Dto\PermissionEntityLookUps\PermissionEntityLookUpList.cs" />
+    <Compile Include="Dto\RolePermissionEntityLookUps\CreateRolePermissionEntityLookUp.cs" />
+    <Compile Include="Dto\RolePermissionEntityLookUps\RolePermissionSearchResponse.cs" />
+    <Compile Include="Dto\RolePermissionEntityLookUps\SaveRolePermissionRequest.cs" />
+    <Compile Include="Dto\Roles\CreateRole.cs" />
     <Compile Include="ExceptionHandling\ExceptionHandledLogger.cs" />
+    <Compile Include="Filters\PermissionAttribute.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\Lookup.cs" />
+    <Compile Include="Models\PermissionEntity.cs" />
+    <Compile Include="Models\PermissionEntityLookUp.cs" />
+    <Compile Include="Models\Role_PermissionEntityLookUp.cs" />
+    <Compile Include="Models\UserOrganization.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Providers\ApplicationOAuthProvider.cs" />
     <Compile Include="Results\ChallengeResult.cs" />
     <Compile Include="Startup.cs" />
-	 <Compile Include="Models\Addresses.cs" />
+    <Compile Include="Models\Addresses.cs" />
     <Compile Include="Models\AddressRelation.cs" />
     <Compile Include="Models\ApiResponse.cs" />
     <Compile Include="Models\Category.cs" />
@@ -273,10 +297,9 @@
     <Compile Include="Models\WarehouseAddress.cs" />
     <Compile Include="Models\Worker.cs" />
     <Compile Include="Models\WorkerAddress.cs" />
-	<Compile Include="Models\AccountBindingModels.cs" />
-	<Compile Include="Models\AccountViewModels.cs" />
-	<Compile Include="Models\IdentityModels.cs" />
-	
+    <Compile Include="Models\AccountBindingModels.cs" />
+    <Compile Include="Models\AccountViewModels.cs" />
+    <Compile Include="Models\IdentityModels.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Areas\HelpPage\HelpPage.css" />

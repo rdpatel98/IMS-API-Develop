@@ -9,7 +9,7 @@ namespace IMSAPI.Models
     {
         public int UserId { get; set; }
         public string UserName { get; set; }
-        public int OrganizationId { get; set; }
+        public List<int> OrganizationId { get; set; }
         public int DefaultWarehouseId { get; set; }
     }
 }

@@ -12,13 +12,39 @@ using System.Web.Http;
 using IMSAPI.ExceptionHandling;
 using IMSAPI.Models;
 using IMSAPI.Models.UnboxFutureContext;
+using Microsoft.AspNet.Identity;
+using Microsoft.AspNet.Identity.Owin;
 
 namespace IMSAPI.Controllers
 {
     [Authorize]
+    [HostAuthentication(DefaultAuthenticationTypes.ExternalBearer)]
     public class StoreAdminController : ApiController
     {
         public string connStr = ConfigurationManager.ConnectionStrings["StoreContext"].ConnectionString;
+        private ApplicationUserManager _userManager;
+
+        public StoreAdminController()
+        {
+        }
+
+        public StoreAdminController(ApplicationUserManager userManager)
+        {
+            UserManager = userManager;
+        }
+
+        public ApplicationUserManager UserManager
+        {
+            get
+            {
+                return _userManager ?? Request.GetOwinContext().GetUserManager<ApplicationUserManager>();
+            }
+            private set
+            {
+                _userManager = value;
+            }
+        }
+
 
         #region Addresses
 
@@ -103,7 +129,13 @@ namespace IMSAPI.Controllers
         {
             using (StoreContext context = new StoreContext())
             {
+                var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
                 var resultList = context.Organizations.Where(e => e.Status == 1).ToList();
+                if (orgs.Any())
+                {
+                    resultList = resultList.Where(x => orgs.Contains(x.OrganizationId)).ToList();
+                }
                 return CommonUtils.CreateSuccessApiResponse(resultList);
             }
         }
@@ -318,11 +350,17 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/ListCategory")]
         [HttpGet]
-        public ApiResponse GetAllCategory(int organizationId)
+        public ApiResponse GetAllCategory()
         {
             using (var context = new StoreContext())
             {
-                var resultList = context.Categories.Where(e => e.Status == 1 && e.OrganizationId == organizationId).ToList();
+                var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
+                var resultList = context.Categories.Where(e => e.Status == 1).ToList();
+                if (orgs.Any())
+                {
+                    resultList = resultList.Where(x => orgs.Contains(x.OrganizationId)).ToList();
+                }
                 return CommonUtils.CreateSuccessApiResponse(resultList);
             }
         }
@@ -444,7 +482,7 @@ namespace IMSAPI.Controllers
                         category.UpdatedUserId = 0;
                         category.UpdatedDateTime = DateTime.UtcNow;
                         category.Status = 1;
-
+                        category.OrganizationId = objCategory.OrganizationId;
                         context.SaveChanges();
                         transaction.Commit();
                         return CommonUtils.CreateSuccessApiResponse(category);
@@ -464,11 +502,17 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/ListUnits")]
         [HttpGet]
-        public ApiResponse GetAllUnits(int organizationId)
+        public ApiResponse GetAllUnits()
         {
             using (var context = new StoreContext())
             {
-                var resultList = context.Units.Where(x => x.OrganizationId == organizationId).ToList();
+                var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
+                var resultList = context.Units.ToList();
+                if (orgs.Any())
+                {
+                    resultList = resultList.Where(x => orgs.Contains(x.OrganizationId)).ToList();
+                }
                 return CommonUtils.CreateSuccessApiResponse(resultList);
             }
         }
@@ -613,11 +657,18 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/ListUOMConversion")]
         [HttpGet]
-        public ApiResponse GetAllUOMConversion(int organizationId)
+        public ApiResponse GetAllUOMConversion()
         {
             using (var context = new StoreContext())
             {
-                var resultList = context.UomConversions.Where(x => x.OrganizationId == organizationId).ToList();
+
+                var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
+                var resultList = context.UomConversions.ToList();
+                if (orgs.Any())
+                {
+                    resultList = resultList.Where(x => orgs.Contains(x.OrganizationId)).ToList();
+                }
                 return CommonUtils.CreateSuccessApiResponse(resultList);
             }
         }
@@ -752,12 +803,19 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/ListItems")]
         [HttpGet]
-        public ApiResponse GetAllItems(int organizationId)
+        public ApiResponse GetAllItems()
         {
             using (var context = new StoreContext())
             {
-                var resultList = context.Items.Where(e => e.Status == 1 && e.OrganizationId == organizationId).ToList();
-                var avgPriceList = GetItemsAvgPrice(organizationId);
+                var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
+                var resultList = context.Items.Where(e => e.Status == 1).ToList();
+                if (orgs.Any())
+                {
+                    resultList = resultList.Where(x => orgs.Contains(x.OrganizationId)).ToList();
+                }
+
+                var avgPriceList = GetItemsAvgPrice(orgs);
                 foreach (var item in resultList)
                 {
                     var itemDetail = avgPriceList.FirstOrDefault(x => x.ItemId == item.ItemId);
@@ -906,165 +964,165 @@ namespace IMSAPI.Controllers
 
         #region Worker
 
-        [Route("api/StoreAdmin/ListWorker")]
-        [HttpGet]
-        public ApiResponse GetAllWorker(int organizationId)
-        {
-            using (var context = new StoreContext())
-            {
-                var resultList = context.Workers.Where(e => e.Status == 1 && e.OrganizationId == organizationId).ToList();
-                return CommonUtils.CreateSuccessApiResponse(resultList);
-            }
-        }
+        //[Route("api/StoreAdmin/ListWorker")]
+        //[HttpGet]
+        //public ApiResponse GetAllWorker()
+        //{
+        //    using (var context = new StoreContext())
+        //    {
+        //        var resultList = context.Workers.Where(e => e.Status == 1 && e.OrganizationId == 1).ToList();
+        //        return CommonUtils.CreateSuccessApiResponse(resultList);
+        //    }
+        //}
 
-        [Route("api/StoreAdmin/GetWorkerByID")]
-        [HttpGet]
-        public ApiResponse GetWorkerById(int workerid)
-        {
-            using (var context = new StoreContext())
-            {
-                try
-                {
-                    var saveWorker = new SaveWorker
-                    {
-                        Addresses = new List<Addresses>(),
-                        Worker = context.Workers.FirstOrDefault(e => e.WorkerId == workerid)
-                    };
-                    var addressRelation = context.WorkerAddresses.Where(x => x.WorkerId == workerid).ToList();
+        //[Route("api/StoreAdmin/GetWorkerByID")]
+        //[HttpGet]
+        //public ApiResponse GetWorkerById(int workerid)
+        //{
+        //    using (var context = new StoreContext())
+        //    {
+        //        try
+        //        {
+        //            var saveWorker = new SaveWorker
+        //            {
+        //                Addresses = new List<Addresses>(),
+        //                Worker = context.Workers.FirstOrDefault(e => e.WorkerId == workerid)
+        //            };
+        //            var addressRelation = context.WorkerAddresses.Where(x => x.WorkerId == workerid).ToList();
 
-                    foreach (var relation in addressRelation)
-                    {
-                        var orgAddress = context.Addresses.FirstOrDefault(x => x.AddressId == relation.AddressId && x.Status == 1);
-                        saveWorker.Addresses.Add(orgAddress);
-                    }
+        //            foreach (var relation in addressRelation)
+        //            {
+        //                var orgAddress = context.Addresses.FirstOrDefault(x => x.AddressId == relation.AddressId && x.Status == 1);
+        //                saveWorker.Addresses.Add(orgAddress);
+        //            }
 
-                    return CommonUtils.CreateSuccessApiResponse(saveWorker);
-                }
-                catch (Exception ex)
-                {
-                    return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
-                }
-            }
-        }
+        //            return CommonUtils.CreateSuccessApiResponse(saveWorker);
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+        //        }
+        //    }
+        //}
 
-        [Route("api/StoreAdmin/DeleteWorker")]
-        [HttpPost]
-        public ApiResponse DeleteWorker(int workerid)
-        {
-            try
-            {
-                using (var context = new StoreContext())
-                {
-                    using (var transaction = context.Database.BeginTransaction())
-                    {
-                        try
-                        {
-                            var item = context.Workers.FirstOrDefault(e => e.WorkerId == workerid);
-                            if (item != null)
-                            {
-                                item.UpdatedUserId = -1;
-                                item.UpdatedDateTime = DateTime.UtcNow;
-                                item.Status = 0;
-                                context.SaveChanges();
-                            }
+        //[Route("api/StoreAdmin/DeleteWorker")]
+        //[HttpPost]
+        //public ApiResponse DeleteWorker(int workerid)
+        //{
+        //    try
+        //    {
+        //        using (var context = new StoreContext())
+        //        {
+        //            using (var transaction = context.Database.BeginTransaction())
+        //            {
+        //                try
+        //                {
+        //                    var item = context.Workers.FirstOrDefault(e => e.WorkerId == workerid);
+        //                    if (item != null)
+        //                    {
+        //                        item.UpdatedUserId = -1;
+        //                        item.UpdatedDateTime = DateTime.UtcNow;
+        //                        item.Status = 0;
+        //                        context.SaveChanges();
+        //                    }
 
-                            transaction.Commit();
+        //                    transaction.Commit();
 
-                            return CommonUtils.CreateSuccessApiResponse(workerid);
-                        }
-                        catch (Exception ex)
-                        {
-                            transaction.Rollback();
-                            ExceptionHandledLogger.Log(ex);
-                            return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ExceptionHandledLogger.Log(ex);
-                return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
-            }
-        }
+        //                    return CommonUtils.CreateSuccessApiResponse(workerid);
+        //                }
+        //                catch (Exception ex)
+        //                {
+        //                    transaction.Rollback();
+        //                    ExceptionHandledLogger.Log(ex);
+        //                    return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        ExceptionHandledLogger.Log(ex);
+        //        return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+        //    }
+        //}
 
-        [Route("api/StoreAdmin/AddWorker")]
-        [HttpPost]
-        public ApiResponse AddWorker(SaveWorker saveWorker)
-        {
-            try
-            {
-                using (var context = new StoreContext())
-                {
-                    using (var transaction = context.Database.BeginTransaction())
-                    {
-                        try
-                        {
-                            saveWorker.Worker.UpdatedUserId = -1;
-                            saveWorker.Worker.UpdatedDateTime = DateTime.UtcNow;
-                            saveWorker.Worker.Status = 1;
-                            saveWorker.Worker.IsBlocked = false;
-                            context.Workers.Add(saveWorker.Worker);
-                            context.SaveChanges();
+        //[Route("api/StoreAdmin/AddWorker")]
+        //[HttpPost]
+        //public ApiResponse AddWorker(SaveWorker saveWorker)
+        //{
+        //    try
+        //    {
+        //        using (var context = new StoreContext())
+        //        {
+        //            using (var transaction = context.Database.BeginTransaction())
+        //            {
+        //                try
+        //                {
+        //                    saveWorker.Worker.UpdatedUserId = -1;
+        //                    saveWorker.Worker.UpdatedDateTime = DateTime.UtcNow;
+        //                    saveWorker.Worker.Status = 1;
+        //                    saveWorker.Worker.IsBlocked = false;
+        //                    context.Workers.Add(saveWorker.Worker);
+        //                    context.SaveChanges();
 
-                            transaction.Commit();
-                            return CommonUtils.CreateSuccessApiResponse(saveWorker.Worker.WorkerId);
-                        }
+        //                    transaction.Commit();
+        //                    return CommonUtils.CreateSuccessApiResponse(saveWorker.Worker.WorkerId);
+        //                }
 
-                        catch (Exception ex)
-                        {
-                            transaction.Rollback();
-                            ExceptionHandledLogger.Log(ex);
-                            return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ExceptionHandledLogger.Log(ex);
-                return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
-            }
-        }
+        //                catch (Exception ex)
+        //                {
+        //                    transaction.Rollback();
+        //                    ExceptionHandledLogger.Log(ex);
+        //                    return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        ExceptionHandledLogger.Log(ex);
+        //        return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+        //    }
+        //}
 
-        [Route("api/StoreAdmin/UpdateWorker")]
-        [HttpPost]
-        public ApiResponse UpdateWorker(SaveWorker objWorker)
-        {
-            using (var context = new StoreContext())
-            {
-                using (var transaction = context.Database.BeginTransaction())
-                {
-                    List<WorkerAddress> addressRelation = new List<WorkerAddress>();
-                    Worker worker = new Worker();
-                    try
-                    {
-                        worker = context.Workers.FirstOrDefault(e => e.WorkerId == objWorker.Worker.WorkerId);
-                        worker.Name = objWorker.Worker.Name;
-                        worker.PersonnelNumber = objWorker.Worker.PersonnelNumber;
-                        worker.DOJ = objWorker.Worker.DOJ;
-                        worker.DOB = objWorker.Worker.DOB;
-                        worker.UserId = objWorker.Worker.UserId;
-                        worker.Password = objWorker.Worker.Password;
-                        worker.IsBlocked = objWorker.Worker.IsBlocked;
-                        worker.OrganizationId = objWorker.Worker.OrganizationId;
-                        worker.UpdatedUserId = -1;
-                        worker.UpdatedDateTime = DateTime.UtcNow;
-                        worker.Status = 1;
-                        context.SaveChanges();
+        //[Route("api/StoreAdmin/UpdateWorker")]
+        //[HttpPost]
+        //public ApiResponse UpdateWorker(SaveWorker objWorker)
+        //{
+        //    using (var context = new StoreContext())
+        //    {
+        //        using (var transaction = context.Database.BeginTransaction())
+        //        {
+        //            List<WorkerAddress> addressRelation = new List<WorkerAddress>();
+        //            Worker worker = new Worker();
+        //            try
+        //            {
+        //                worker = context.Workers.FirstOrDefault(e => e.WorkerId == objWorker.Worker.WorkerId);
+        //                worker.Name = objWorker.Worker.Name;
+        //                worker.PersonnelNumber = objWorker.Worker.PersonnelNumber;
+        //                worker.DOJ = objWorker.Worker.DOJ;
+        //                worker.DOB = objWorker.Worker.DOB;
+        //                worker.UserId = objWorker.Worker.UserId;
+        //                worker.Password = objWorker.Worker.Password;
+        //                worker.IsBlocked = objWorker.Worker.IsBlocked;
+        //                worker.OrganizationId = objWorker.Worker.OrganizationId;
+        //                worker.UpdatedUserId = -1;
+        //                worker.UpdatedDateTime = DateTime.UtcNow;
+        //                worker.Status = 1;
+        //                context.SaveChanges();
 
-                        transaction.Commit();
+        //                transaction.Commit();
 
-                        return CommonUtils.CreateSuccessApiResponse(objWorker);
-                    }
-                    catch (Exception ex)
-                    {
-                        transaction.Rollback();
-                        return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
-                    }
-                }
-            }
-        }
+        //                return CommonUtils.CreateSuccessApiResponse(objWorker);
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                transaction.Rollback();
+        //                return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+        //            }
+        //        }
+        //    }
+        //}
 
         [Route("api/StoreAdmin/AddWorkerAddress")]
         [HttpPost]
@@ -1118,11 +1176,17 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/ListVendor")]
         [HttpGet]
-        public ApiResponse GetAllVendor(int organizationId)
+        public ApiResponse GetAllVendor()
         {
             using (StoreContext context = new StoreContext())
             {
-                var resultList = context.Vendors.Where(e => e.Status == 1 && e.OrganizationId == organizationId).ToList();
+                var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
+                var resultList = context.Vendors.Where(e => e.Status == 1).ToList();
+                if (orgs.Any())
+                {
+                    resultList = resultList.Where(x => orgs.Contains(x.OrganizationId)).ToList();
+                }
                 return CommonUtils.CreateSuccessApiResponse(resultList);
             }
         }
@@ -1358,14 +1422,16 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/ListWarehouse")]
         [HttpGet]
-        public async Task<ApiResponse> GetAllWarehouse(int? organizationId)
+        public async Task<ApiResponse> GetAllWarehouse()
         {
             using (var context = new StoreContext())
             {
+                var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
                 var result = context.Warehouses.Where(e => e.Status == 1);
-                if (organizationId.HasValue && organizationId > 0)
+                if (orgs.Any())
                 {
-                    result = result.Where(x => x.OrganizationId == organizationId);
+                    result = result.Where(x => orgs.Contains(x.OrganizationId));
                 }
                 return CommonUtils.CreateSuccessApiResponse(await result.ToListAsync());
             }
@@ -1373,12 +1439,19 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/GetWarehouseByOrganizationID")]
         [HttpGet]
-        public ApiResponse GetWarehouseByOrganization(int organizationId)
+        public ApiResponse GetWarehouseByOrganization()
         {
             using (var context = new StoreContext())
             {
-                var resultList = context.Warehouses.Where(e => e.Status == 1 && e.OrganizationId == organizationId).ToList();
-                return CommonUtils.CreateSuccessApiResponse(resultList);
+                var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
+                var result = context.Warehouses.Where(e => e.Status == 1);
+                if (orgs.Any())
+                {
+                    result = result.Where(x => orgs.Contains(x.OrganizationId));
+                }
+
+                return CommonUtils.CreateSuccessApiResponse(result);
             }
         }
 
@@ -1579,13 +1652,25 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/ListItemCategory")]
         [HttpGet]
-        public ApiResponse GetAllItemCategory(int organizationId)
+        public ApiResponse GetAllItemCategory()
         {
             try
             {
-                var itemCategories = GetItemCategories(organizationId);
+                using (var context = new StoreContext())
+                {
+                    var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                    var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
+                    var itemCategories = new List<ItemCategory>();
+                    if (orgs.Any())
+                    {
+                        itemCategories = GetItemCategories(orgs);
+                    }
 
-                return CommonUtils.CreateSuccessApiResponse(itemCategories);
+
+
+                    return CommonUtils.CreateSuccessApiResponse(itemCategories);
+                }
+
             }
             catch (Exception ex)
             {
@@ -1594,12 +1679,13 @@ namespace IMSAPI.Controllers
             }
         }
 
-        private List<ItemCategory> GetItemCategories(int organizationId)
+        private List<ItemCategory> GetItemCategories(IQueryable<int> organizationIds)
         {
+            var org_Ids = string.Join(",", organizationIds);
             var sqlQuery =
                 $"SELECT ic.ItemCategoryId, ic.CategoryId, c.[Name] AS CategoryName, ic.UpdatedUserId, ic.UpdatedDateTime, ic.[Status], ic.OrganizationId FROM dbo.ItemCategory ic " +
                 $"INNER JOIN dbo.Category c ON ic.CategoryId = c.CategoryId " +
-                $"WHERE ic.OrganizationId = {organizationId} AND ic.[Status] = 1";
+                $"WHERE ic.OrganizationId in ({org_Ids}) AND ic.[Status] = 1";
 
             var itemCategories = new List<ItemCategory>();
             var con = new SqlConnection(connStr);
@@ -1888,44 +1974,57 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/GetItemsWithCategoryByWarehouseId")]
         [HttpGet]
-        public ApiResponse GetItemsWithCategoryByWarehouseId(int warehouseId, int organizationId)
+        public ApiResponse GetItemsWithCategoryByWarehouseId(int warehouseId)
         {
             try
             {
-                var saveItemConsumptionWithCategory = new SaveItemConsumptionWithCategory
+                using (var context = new StoreContext())
                 {
-                    ConsumptionCategory = new List<ConsumptionCategory>()
-                };
 
-                List<ItemCategory> itemCategoryList = GetItemCategories(organizationId);
-                foreach (var itemCategory in itemCategoryList)
-                {
-                    var consumptionCategory = new ConsumptionCategory();
 
-                    consumptionCategory.CategoryName = itemCategory.CategoryName;
-                    consumptionCategory.ItemCategoryId = itemCategory.ItemCategoryId;
-                    var itemCollections = GetItemCategoryCollections(itemCategory.ItemCategoryId, warehouseId);
-                    var consumptionItemList = new List<ConsumptionItems>();
-                    foreach (var item in itemCollections)
+                    var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                    var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
+                    var result = context.Warehouses.Where(e => e.Status == 1);
+                    List<ItemCategory> itemCategoryList = new List<ItemCategory>();
+                    if (orgs.Any())
                     {
-                        var consumptionItem = new ConsumptionItems
-                        {
-                            UnitId = item.UnitId,
-                            ItemId = item.ItemId,
-                            ItemName = item.ItemName,
-                            OnHandQty = item.OnHandQty,
-                            UnitName = item.UnitName,
-                            Quantity = 0
-                        };
-                        consumptionItemList.Add(consumptionItem);
+                        itemCategoryList = GetItemCategories(orgs);
                     }
 
+                    var saveItemConsumptionWithCategory = new SaveItemConsumptionWithCategory
+                    {
+                        ConsumptionCategory = new List<ConsumptionCategory>()
+                    };
 
-                    consumptionCategory.ConsumptionItems = consumptionItemList;
-                    saveItemConsumptionWithCategory.ConsumptionCategory.Add(consumptionCategory);
+
+                    foreach (var itemCategory in itemCategoryList)
+                    {
+                        var consumptionCategory = new ConsumptionCategory();
+
+                        consumptionCategory.CategoryName = itemCategory.CategoryName;
+                        consumptionCategory.ItemCategoryId = itemCategory.ItemCategoryId;
+                        var itemCollections = GetItemCategoryCollections(itemCategory.ItemCategoryId, warehouseId);
+                        var consumptionItemList = new List<ConsumptionItems>();
+                        foreach (var item in itemCollections)
+                        {
+                            var consumptionItem = new ConsumptionItems
+                            {
+                                UnitId = item.UnitId,
+                                ItemId = item.ItemId,
+                                ItemName = item.ItemName,
+                                OnHandQty = item.OnHandQty,
+                                UnitName = item.UnitName,
+                                Quantity = 0
+                            };
+                            consumptionItemList.Add(consumptionItem);
+                        }
+
+
+                        consumptionCategory.ConsumptionItems = consumptionItemList;
+                        saveItemConsumptionWithCategory.ConsumptionCategory.Add(consumptionCategory);
+                    }
+                    return CommonUtils.CreateSuccessApiResponse(saveItemConsumptionWithCategory);
                 }
-
-                return CommonUtils.CreateSuccessApiResponse(saveItemConsumptionWithCategory);
             }
             catch (Exception ex)
             {
@@ -1940,11 +2039,18 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/GetPrefixByType")]
         [HttpGet]
-        public ApiResponse GetPrefix(int organizationId, string type)
+        public ApiResponse GetPrefix(string type)
         {
             using (var context = new StoreContext())
             {
-                var organization = context.Organizations.FirstOrDefault(e => e.OrganizationId == organizationId);
+                var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
+                //var resultList = context.Organizations.Where(e => e.Status == 1).ToList();
+                //if (orgs.Any())
+                //{
+                //    resultList = resultList.Where(x => orgs.Contains(x.OrganizationId)).ToList();
+                //}
+                var organization = context.Organizations.FirstOrDefault(e => e.OrganizationId == orgs.FirstOrDefault());
                 var transactionType = type.ToLower();
                 int count = 0;
                 int charPrefixHashCount = 0;
@@ -1956,25 +2062,25 @@ namespace IMSAPI.Controllers
                     case "po":
                         {
                             formatString = organization.PurchaseOrderPrefix;
-                            count = context.PurchaseOrders.Count(x => x.OrganizationId == organizationId);
+                            count = context.PurchaseOrders.Count(x => x.OrganizationId == orgs.FirstOrDefault());
                             break;
                         }
                     case "pr":
                         {
                             formatString = organization.ReturnOrderPrefix;
-                            count = context.PurchaseReceive.Count(x => x.OrganizationId == organizationId);
+                            count = context.PurchaseReceive.Count(x => x.OrganizationId == orgs.FirstOrDefault());
                             break;
                         }
                     case "ic":
                         {
                             formatString = organization.ItemConsumptionPrefix;
-                            count = context.Consumption.Count(x => x.OrganizationId == organizationId);
+                            count = context.Consumption.Count(x => x.OrganizationId == orgs.FirstOrDefault());
                             break;
                         }
                     case "ia":
                         {
                             formatString = organization.InventoryAdjustmentPrefix;
-                            count = context.InventoryAdjustment.Count(x => x.OrganizationId == organizationId);
+                            count = context.InventoryAdjustment.Count(x => x.OrganizationId == orgs.FirstOrDefault());
                             break;
                         }
                     default:
@@ -1995,11 +2101,18 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/ListPurchaseOrder")]
         [HttpGet]
-        public ApiResponse GetAllPurchaseOrder(int organizationId)
+        public ApiResponse GetAllPurchaseOrder()
         {
             using (StoreContext context = new StoreContext())
             {
-                var resultList = context.PurchaseOrders.Where(e => e.Status == 1 && e.OrganizationId == organizationId).ToList();
+
+                var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
+                var resultList = context.PurchaseOrders.Where(e => e.Status == 1).ToList();
+                if (orgs.Any())
+                {
+                    resultList = resultList.Where(x => orgs.Contains(x.OrganizationId)).ToList();
+                }
                 return CommonUtils.CreateSuccessApiResponse(resultList);
             }
         }
@@ -2882,10 +2995,12 @@ namespace IMSAPI.Controllers
 
         #region ItemsUsageDetails
 
-        private List<Items> GetItemsAvgPrice(int organizationId)
+        private List<Items> GetItemsAvgPrice(IQueryable<int> organizationIds)
         {
             try
             {
+
+                var org_Ids = string.Join(",", organizationIds);
                 var itemList = new List<Items>();
 
                 var con = new SqlConnection(connStr);
@@ -2894,11 +3009,14 @@ namespace IMSAPI.Controllers
                 var sqlQuery =
                     $"  ;with cteRowNumber as (SELECT poi.ItemId, ROUND(AVG(poi.UnitPrice),2) AS AvgPrice FROM dbo.PurchaseOrderItems poi " +
                     $" INNER JOIN dbo.PurchaseOrder po ON po.PurchaseOrderId = poi.PurchaseOrderId " +
-                    $" WHERE po.OrganizationId = {organizationId} GROUP BY poi.ItemId) " +
+                    $" WHERE po.OrganizationId in ({org_Ids}) GROUP BY poi.ItemId) " +
                     $" select i.ItemId, CAST(ISNULL(cte.AvgPrice, 0) as decimal(10, 2)) AS AvgPrice, ISNULL(v.[Name], '') AS SourceOfOriginName from dbo.Items i " +
-                    $" left join cteRowNumber cte ON i.ItemId = cte.ItemId left join dbo.Vendor v ON v.VendorId = i.SourceOfOrigin " +
-                    $"  where i.OrganizationId = {organizationId} ";
+                    $" left join cteRowNumber cte ON i.ItemId = cte.ItemId left join dbo.Vendor v ON v.VendorId = i.SourceOfOrigin ";
 
+                if (organizationIds.Any())
+                {
+                    sqlQuery = sqlQuery + $"  where i.OrganizationId in ({org_Ids}) ";
+                }
 
                 using (var command = new SqlCommand(sqlQuery, con))
                 {
@@ -2932,50 +3050,60 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/GetVendorPriceListByItemId")]
         [HttpGet]
-        public ApiResponse GetVendorPriceListByItemId(int itemId, int organizationId)
+        public ApiResponse GetVendorPriceListByItemId(int itemId)
         {
             try
             {
-                var vendorPriceLists = new List<VendorPriceList>();
-
-                var con = new SqlConnection(connStr);
-                con.Open();
-
-                var sqlQuery = $" ;with cteRowNumber as ( " +
-                               $" select poi.ItemId, poi.UnitPrice, po.VendorId, po.OrderDate, " +
-                               $" row_number() over(partition by poi.ItemId, po.VendorId order by poi.PurchaseOrderItemsId desc) as RowNum " +
-                               $" from dbo.PurchaseOrderItems poi " +
-                               $" inner join dbo.PurchaseOrder po on poi.PurchaseOrderId = po.PurchaseOrderId " +
-                               $" where po.OrganizationId = {organizationId} ) " +
-                               $" select cte.ItemId, cte.UnitPrice, cte.VendorId, v.[Name] AS VendorName, v.Id AS VendorNo, cte.OrderDate " +
-                               $" from cteRowNumber cte " +
-                               $" inner join dbo.Vendor v ON v.VendorId = cte.VendorId " +
-                               $" where RowNum = 1 and cte.ItemId = {itemId}";
-
-
-                using (var command = new SqlCommand(sqlQuery, con))
+                using (StoreContext context = new StoreContext())
                 {
-                    command.CommandType = CommandType.Text;
+                    var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                    var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId).ToList();
+                    var org_Ids = string.Join(",", orgs);
 
-                    using (var reader = command.ExecuteReader())
+                    var vendorPriceLists = new List<VendorPriceList>();
+
+                    var con = new SqlConnection(connStr);
+                    con.Open();
+
+                    var sqlQuery1 = $" ;with cteRowNumber as ( " +
+                                   $" select poi.ItemId, poi.UnitPrice, po.VendorId, po.OrderDate, " +
+                                   $" row_number() over(partition by poi.ItemId, po.VendorId order by poi.PurchaseOrderItemsId desc) as RowNum " +
+                                   $" from dbo.PurchaseOrderItems poi " +
+                                   $" inner join dbo.PurchaseOrder po on poi.PurchaseOrderId = po.PurchaseOrderId ";
+                                   //$" where po.OrganizationId = {organizationId} ) " +
+                    var sqlQuery2 = $" select cte.ItemId, cte.UnitPrice, cte.VendorId, v.[Name] AS VendorName, v.Id AS VendorNo, cte.OrderDate " +
+                                   $" from cteRowNumber cte " +
+                                   $" inner join dbo.Vendor v ON v.VendorId = cte.VendorId " +
+                                   $" where RowNum = 1 and cte.ItemId = {itemId}";
+                    if (orgs.Any())
                     {
-                        while (reader.Read())
+                        sqlQuery1 = sqlQuery1 + $"where po.OrganizationId = ({org_Ids}) )";
+                    }
+                    var sqlQuery = sqlQuery1 + sqlQuery2;
+                    using (var command = new SqlCommand(sqlQuery, con))
+                    {
+                        command.CommandType = CommandType.Text;
+
+                        using (var reader = command.ExecuteReader())
                         {
-                            var tmpRecord = new VendorPriceList()
+                            while (reader.Read())
                             {
-                                VendorNo = reader["VendorNo"].ToString(),
-                                VendorName = reader["VendorName"].ToString(),
-                                UnitPrice = double.Parse(reader["UnitPrice"].ToString()),
-                                OrderDate = DateTime.Parse(reader["OrderDate"].ToString()),
-                            };
-                            vendorPriceLists.Add(tmpRecord);
+                                var tmpRecord = new VendorPriceList()
+                                {
+                                    VendorNo = reader["VendorNo"].ToString(),
+                                    VendorName = reader["VendorName"].ToString(),
+                                    UnitPrice = double.Parse(reader["UnitPrice"].ToString()),
+                                    OrderDate = DateTime.Parse(reader["OrderDate"].ToString()),
+                                };
+                                vendorPriceLists.Add(tmpRecord);
+                            }
                         }
                     }
+
+                    con.Close();
+
+                    return CommonUtils.CreateSuccessApiResponse(vendorPriceLists);
                 }
-
-                con.Close();
-
-                return CommonUtils.CreateSuccessApiResponse(vendorPriceLists);
             }
             catch (Exception ex)
             {
@@ -2986,59 +3114,75 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/GetAllTransactionsByItemId")]
         [HttpGet]
-        public ApiResponse GetAllTransactionsByItemId(int itemId, int organizationId)
+        public ApiResponse GetAllTransactionsByItemId(int itemId)
         {
             try
             {
-                var transactionDetails = new List<TransactionDetail>();
-
-                var con = new SqlConnection(connStr);
-                con.Open();
-
-                var sqlQuery = $"SELECT i.ItemNo,inv.InvoiceDate AS TransactionDate, 'Purchase Order' AS Reference, tr.TransactionId AS RefNo, invi.Quantity, invi.BatchNo AS LotNo FROM dbo.Transactions tr " +
-                    $" INNER JOIN dbo.Invoice inv ON inv.InvoiceId = tr.RelationId AND tr.[Type] = 3 " +
-                $" INNER JOIN dbo.InvoiceItems invi ON inv.InvoiceId = invi.InvoiceId " +
-                $" INNER JOIN dbo.Items i ON i.ItemId = invi.ItemId " +
-                $" WHERE invi.ItemId = {itemId} AND inv.OrganizationId = {organizationId} " +
-                $" UNION ALL " +
-                $" SELECT i.ItemNo,inv.AdjustmentDate AS TransactionDate, 'Adjustment' AS Reference, tr.TransactionId AS RefNo, invi.Quantity, invi.Reason AS LotNo FROM dbo.Transactions tr " +
-                $" INNER JOIN dbo.InventoryAdjustment inv ON inv.InventoryAdjustmentId = tr.RelationId AND tr.[Type] = 1 " +
-                $" INNER JOIN dbo.InventoryAdjustmentItems invi ON inv.InventoryAdjustmentId = invi.InventoryAdjustmentId " +
-                $" INNER JOIN dbo.Items i ON i.ItemId = invi.ItemId " +
-                $" WHERE invi.ItemId = {itemId} AND inv.OrganizationId = {organizationId} " +
-                $" UNION ALL " +
-                $" SELECT i.ItemNo,inv.ConsumptionDate AS TransactionDate, 'Item Consumption' AS Reference, tr.TransactionId AS RefNo, invi.Quantity, '' AS LotNo FROM dbo.Transactions tr " +
-                $" INNER JOIN dbo.Consumption inv ON inv.ConsumptionId = tr.RelationId AND tr.[Type] = 2 " +
-                $" INNER JOIN dbo.ConsumptionItems invi ON inv.ConsumptionId = invi.ConsumptionId " +
-                $" INNER JOIN dbo.Items i ON i.ItemId = invi.ItemId " +
-                $" WHERE invi.ItemId = {itemId} AND inv.OrganizationId = {organizationId}";
-
-
-                using (var command = new SqlCommand(sqlQuery, con))
+                using (StoreContext context = new StoreContext())
                 {
-                    command.CommandType = CommandType.Text;
+                    var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                    var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId).ToList();
+                    var org_Ids = string.Join(",", orgs);
 
-                    using (var reader = command.ExecuteReader())
+                    var transactionDetails = new List<TransactionDetail>();
+
+                    var con = new SqlConnection(connStr);
+                    con.Open();
+
+                    var sqlQuery1 = $"SELECT i.ItemNo,inv.InvoiceDate AS TransactionDate, 'Purchase Order' AS Reference, tr.TransactionId AS RefNo, invi.Quantity, invi.BatchNo AS LotNo FROM dbo.Transactions tr " +
+                        $" INNER JOIN dbo.Invoice inv ON inv.InvoiceId = tr.RelationId AND tr.[Type] = 3 " +
+                    $" INNER JOIN dbo.InvoiceItems invi ON inv.InvoiceId = invi.InvoiceId " +
+                    $" INNER JOIN dbo.Items i ON i.ItemId = invi.ItemId " +
+                    $" WHERE invi.ItemId = {itemId} ";
+                    //AND inv.OrganizationId = {organizationId} " +
+                    var sqlQuery2 = $" UNION ALL " +
+                    $" SELECT i.ItemNo,inv.AdjustmentDate AS TransactionDate, 'Adjustment' AS Reference, tr.TransactionId AS RefNo, invi.Quantity, invi.Reason AS LotNo FROM dbo.Transactions tr " +
+                    $" INNER JOIN dbo.InventoryAdjustment inv ON inv.InventoryAdjustmentId = tr.RelationId AND tr.[Type] = 1 " +
+                    $" INNER JOIN dbo.InventoryAdjustmentItems invi ON inv.InventoryAdjustmentId = invi.InventoryAdjustmentId " +
+                    $" INNER JOIN dbo.Items i ON i.ItemId = invi.ItemId " +
+                    $" WHERE invi.ItemId = {itemId} ";
+                    //AND inv.OrganizationId = {organizationId} " +
+                    var sqlQuery3 = $" UNION ALL " +
+                    $" SELECT i.ItemNo,inv.ConsumptionDate AS TransactionDate, 'Item Consumption' AS Reference, tr.TransactionId AS RefNo, invi.Quantity, '' AS LotNo FROM dbo.Transactions tr " +
+                    $" INNER JOIN dbo.Consumption inv ON inv.ConsumptionId = tr.RelationId AND tr.[Type] = 2 " +
+                    $" INNER JOIN dbo.ConsumptionItems invi ON inv.ConsumptionId = invi.ConsumptionId " +
+                    $" INNER JOIN dbo.Items i ON i.ItemId = invi.ItemId " +
+                    $" WHERE invi.ItemId = {itemId}";
+                    //AND inv.OrganizationId = {organizationId}";
+                    if (orgs.Any())
                     {
-                        while (reader.Read())
+                        sqlQuery1 = sqlQuery1 + $" AND inv.OrganizationId in ({org_Ids}) ";
+                        sqlQuery2 = sqlQuery2 + $" AND inv.OrganizationId in ({org_Ids}) ";
+                        sqlQuery3 = sqlQuery3 + $" AND inv.OrganizationId in ({org_Ids}) ";
+                    }
+                    var sqlQuery = sqlQuery1 + " " + sqlQuery2 + " " + sqlQuery3;
+
+                    using (var command = new SqlCommand(sqlQuery, con))
+                    {
+                        command.CommandType = CommandType.Text;
+
+                        using (var reader = command.ExecuteReader())
                         {
-                            var tmpRecord = new TransactionDetail()
+                            while (reader.Read())
                             {
-                                ItemNo = reader["ItemNo"].ToString(),
-                                Reference = reader["Reference"].ToString(),
-                                RefNo = reader["RefNo"].ToString(),
-                                LotNo = reader["LotNo"].ToString(),
-                                Quantity = double.Parse(reader["Quantity"].ToString()),
-                                TransactionDate = DateTime.Parse(reader["TransactionDate"].ToString()),
-                            };
-                            transactionDetails.Add(tmpRecord);
+                                var tmpRecord = new TransactionDetail()
+                                {
+                                    ItemNo = reader["ItemNo"].ToString(),
+                                    Reference = reader["Reference"].ToString(),
+                                    RefNo = reader["RefNo"].ToString(),
+                                    LotNo = reader["LotNo"].ToString(),
+                                    Quantity = double.Parse(reader["Quantity"].ToString()),
+                                    TransactionDate = DateTime.Parse(reader["TransactionDate"].ToString()),
+                                };
+                                transactionDetails.Add(tmpRecord);
+                            }
                         }
                     }
+
+                    con.Close();
+
+                    return CommonUtils.CreateSuccessApiResponse(transactionDetails);
                 }
-
-                con.Close();
-
-                return CommonUtils.CreateSuccessApiResponse(transactionDetails);
             }
             catch (Exception ex)
             {
@@ -3049,42 +3193,52 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/GetCategoryByItemId")]
         [HttpGet]
-        public ApiResponse GetCategoryByItemId(int itemId, int organizationId)
+        public ApiResponse GetCategoryByItemId(int itemId)
         {
             try
             {
-                var itemCategoryDetails = new List<CategoryItemDetails>();
-
-                var con = new SqlConnection(connStr);
-                con.Open();
-
-                var sqlQuery = $" SELECT c.[Name] AS CategoryName, i.ItemNo FROM dbo.ItemCategoryCollection ic " +
-                               $" INNER JOIN dbo.Category c ON c.CategoryId = ic.CategoryId " +
-                               $" INNER JOIN dbo.Items i ON i.ItemId = ic.ItemId " +
-                               $" WHERE ic.ItemId = {itemId} AND i.OrganizationId = {organizationId}";
-
-
-                using (var command = new SqlCommand(sqlQuery, con))
+                using (StoreContext context = new StoreContext())
                 {
-                    command.CommandType = CommandType.Text;
+                    var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                    var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId).ToList();
+                    var org_Ids = string.Join(",", orgs);
 
-                    using (var reader = command.ExecuteReader())
+                    var itemCategoryDetails = new List<CategoryItemDetails>();
+
+                    var con = new SqlConnection(connStr);
+                    con.Open();
+
+                    var sqlQuery = $" SELECT c.[Name] AS CategoryName, i.ItemNo FROM dbo.ItemCategoryCollection ic " +
+                                   $" INNER JOIN dbo.Category c ON c.CategoryId = ic.CategoryId " +
+                                   $" INNER JOIN dbo.Items i ON i.ItemId = ic.ItemId " +
+                                   $" WHERE ic.ItemId = {itemId} ";
+                    if (orgs.Any())
                     {
-                        while (reader.Read())
+                        sqlQuery = sqlQuery + $"And  i.OrganizationId in ({org_Ids}) ";
+                    }
+
+                    using (var command = new SqlCommand(sqlQuery, con))
+                    {
+                        command.CommandType = CommandType.Text;
+
+                        using (var reader = command.ExecuteReader())
                         {
-                            var tmpRecord = new CategoryItemDetails()
+                            while (reader.Read())
                             {
-                                CategoryName = reader["CategoryName"].ToString(),
-                                ItemNo = reader["ItemNo"].ToString(),
-                            };
-                            itemCategoryDetails.Add(tmpRecord);
+                                var tmpRecord = new CategoryItemDetails()
+                                {
+                                    CategoryName = reader["CategoryName"].ToString(),
+                                    ItemNo = reader["ItemNo"].ToString(),
+                                };
+                                itemCategoryDetails.Add(tmpRecord);
+                            }
                         }
                     }
+
+                    con.Close();
+
+                    return CommonUtils.CreateSuccessApiResponse(itemCategoryDetails);
                 }
-
-                con.Close();
-
-                return CommonUtils.CreateSuccessApiResponse(itemCategoryDetails);
             }
             catch (Exception ex)
             {
@@ -3095,47 +3249,57 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/GetOnHandQtyByItemId")]
         [HttpGet]
-        public ApiResponse GetOnHandQtyByItemId(int itemId, int organizationId)
+        public ApiResponse GetOnHandQtyByItemId(int itemId)
         {
             try
             {
-                var itemOnHandQtyList = new List<ItemOnHandQty>();
-
-                var con = new SqlConnection(connStr);
-                con.Open();
-
-                var sqlQuery = $" ;with cteRowNumber as ( select s.ItemId,  s.OnHandQuantity, s.WarehouseId, " +
-                $" row_number() over(partition by s.ItemId , s.WarehouseId order by s.StockId desc) as RowNum from dbo.Stock s " +
-                $" INNER JOIN dbo.Items i ON i.ItemId = s.ItemId " +
-                $" where s.ItemId = {itemId} AND i.OrganizationId = {organizationId}) " +
-                $" select cte.ItemId, w.[Name] AS WarehouseName, u.[Name] AS Unit, cte.OnHandQuantity , i.ItemNo from cteRowNumber cte  " +
-                $" INNER JOIN dbo.Items i ON i.ItemId = cte.ItemId " +
-                $" INNER JOIN dbo.UomConversion u ON u.Id = i.InventoryUnitId " +
-                $" INNER JOIN dbo.WareHouse w ON w.WarehouseId = cte.WarehouseId where cte.RowNum = 1 ";
-
-
-                using (var command = new SqlCommand(sqlQuery, con))
+                using (StoreContext context = new StoreContext())
                 {
-                    command.CommandType = CommandType.Text;
+                    var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                    var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId).ToList();
+                    var org_Ids = string.Join(",", orgs);
 
-                    using (var reader = command.ExecuteReader())
+                    var itemOnHandQtyList = new List<ItemOnHandQty>();
+
+                    var con = new SqlConnection(connStr);
+                    con.Open();
+
+                    var sqlQuery1 = $" ;with cteRowNumber as ( select s.ItemId,  s.OnHandQuantity, s.WarehouseId, " +
+                    $" row_number() over(partition by s.ItemId , s.WarehouseId order by s.StockId desc) as RowNum from dbo.Stock s " +
+                    $" INNER JOIN dbo.Items i ON i.ItemId = s.ItemId " +
+                    $" where s.ItemId = {itemId} ";
+                    var sqlQuery2 = $" select cte.ItemId, w.[Name] AS WarehouseName, u.[Name] AS Unit, cte.OnHandQuantity , i.ItemNo from cteRowNumber cte  " +
+                    $" INNER JOIN dbo.Items i ON i.ItemId = cte.ItemId " +
+                    $" INNER JOIN dbo.UomConversion u ON u.Id = i.InventoryUnitId " +
+                    $" INNER JOIN dbo.WareHouse w ON w.WarehouseId = cte.WarehouseId where cte.RowNum = 1 ";
+                    if (orgs.Any())
                     {
-                        while (reader.Read())
+                        sqlQuery1 = sqlQuery1 + $"And  i.OrganizationId in ({org_Ids}) ";
+                    }
+                    var sqlQuery = sqlQuery1 + sqlQuery2;
+                    using (var command = new SqlCommand(sqlQuery, con))
+                    {
+                        command.CommandType = CommandType.Text;
+
+                        using (var reader = command.ExecuteReader())
                         {
-                            var itemOnHandQty = new ItemOnHandQty();
-                            itemOnHandQty.ItemId = int.Parse(reader["ItemId"].ToString());
-                            itemOnHandQty.ItemNo = reader["ItemNo"].ToString();
-                            itemOnHandQty.WarehouseName = reader["WarehouseName"].ToString();
-                            itemOnHandQty.Unit = reader["Unit"].ToString();
-                            itemOnHandQty.OnHandQuantity = double.Parse(reader["OnHandQuantity"].ToString());
-                            itemOnHandQtyList.Add(itemOnHandQty);
+                            while (reader.Read())
+                            {
+                                var itemOnHandQty = new ItemOnHandQty();
+                                itemOnHandQty.ItemId = int.Parse(reader["ItemId"].ToString());
+                                itemOnHandQty.ItemNo = reader["ItemNo"].ToString();
+                                itemOnHandQty.WarehouseName = reader["WarehouseName"].ToString();
+                                itemOnHandQty.Unit = reader["Unit"].ToString();
+                                itemOnHandQty.OnHandQuantity = double.Parse(reader["OnHandQuantity"].ToString());
+                                itemOnHandQtyList.Add(itemOnHandQty);
+                            }
                         }
                     }
+
+                    con.Close();
+
+                    return CommonUtils.CreateSuccessApiResponse(itemOnHandQtyList);
                 }
-
-                con.Close();
-
-                return CommonUtils.CreateSuccessApiResponse(itemOnHandQtyList);
             }
             catch (Exception ex)
             {
@@ -3147,11 +3311,18 @@ namespace IMSAPI.Controllers
 
         [Route("api/StoreAdmin/ListInventoryAdjustment")]
         [HttpGet]
-        public ApiResponse GetAllInventoryAdjustments(int organizationId)
+        public ApiResponse GetAllInventoryAdjustments()
         {
             using (StoreContext context = new StoreContext())
             {
-                var resultList = context.InventoryAdjustment.Where(e => e.Status == 1 && e.OrganizationId == organizationId).ToList();
+                var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
+                var resultList = context.InventoryAdjustment.Where(e => e.Status == 1).ToList();
+                if (orgs.Any())
+                {
+                    resultList = resultList.Where(x => orgs.Contains(x.OrganizationId)).ToList();
+                }
+
                 return CommonUtils.CreateSuccessApiResponse(resultList);
             }
         }

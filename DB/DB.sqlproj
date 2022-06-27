@@ -60,6 +60,7 @@
     <Folder Include="Properties" />
     <Folder Include="dbo\" />
     <Folder Include="dbo\Tables\" />
+    <Folder Include="dbo\Scripts" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Addresses.sql" />
@@ -95,5 +96,11 @@
     <Build Include="dbo\Tables\AspNetUserLogins.sql" />
     <Build Include="dbo\Tables\AspNetUserRoles.sql" />
     <Build Include="dbo\Tables\AspNetUsers.sql" />
+    <Build Include="dbo\Tables\Lookups.sql" />
+    <Build Include="dbo\Tables\PermissionEntities.sql" />
+    <Build Include="dbo\Tables\PermissionEntityLookUps.sql" />
+    <Build Include="dbo\Tables\Role_PermissionEntityLookUps.sql" />
+    <None Include="dbo\Scripts\Admin_Data.sql" />
+    <Build Include="dbo\Tables\UserOrganizationMapping.sql" />
   </ItemGroup>
 </Project>

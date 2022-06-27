@@ -9,7 +9,7 @@ using System.Web.Http;
 using System.Web.Http.ModelBinding;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
-using Microsoft.AspNet.Identity.Owin;   
+using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin.Security;
 using Microsoft.Owin.Security.Cookies;
 using Microsoft.Owin.Security.OAuth;
@@ -18,6 +18,9 @@ using IMSAPI.Providers;
 using IMSAPI.Results;
 using IMSAPI.Models.UnboxFutureContext;
 using System.Linq;
+using System.Data.Entity;
+using IMSAPI.Filters;
+using IMSAPI.Common;
 
 namespace IMSAPI.Controllers
 {
@@ -27,7 +30,7 @@ namespace IMSAPI.Controllers
     {
         private const string LocalLoginProvider = "Local";
         private ApplicationUserManager _userManager;
-        
+
         public AccountController()
         {
         }
@@ -55,28 +58,78 @@ namespace IMSAPI.Controllers
 
         // GET api/Account/UserInfo
         [HostAuthentication(DefaultAuthenticationTypes.ExternalBearer)]
+        //[PermissionAttribute(Permissions.Audit_Booking_Create)]
         [Route("UserInfo")]
         public UserInfoViewModel GetUserInfo()
         {
-            ExternalLoginData externalLogin = ExternalLoginData.FromIdentity(User.Identity as ClaimsIdentity);
-            var context = new StoreContext();
-            var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
-            var org = context.Organizations.FirstOrDefault(x => x.OrganizationId == user.OrganizationId);
-            var userDetail = new UserDetail
+            try
             {
-                OrganizationId = user.OrganizationId.Value,
-                UserId = user.Id,
-                UserName = user.UserName,
-                DefaultWarehouseId = Convert.ToInt32(org?.TransactionalWarehouseId)
-            };
-            return new UserInfoViewModel
-            {
-                Email = User.Identity.GetUserName(),
-                HasRegistered = externalLogin == null,
-                LoginProvider = externalLogin != null ? externalLogin.LoginProvider : null
-            };
-        }
 
+
+                ExternalLoginData externalLogin = ExternalLoginData.FromIdentity(User.Identity as ClaimsIdentity);
+                var context = new StoreContext();
+                var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
+                //var org = context.Organizations.FirstOrDefault(x => x.OrganizationId == user.OrganizationId);
+                //List<int> orgIds = new List<int>();
+                //orgIds.Add(user.OrganizationId.Value);
+                var userDetail = new UserDetail
+                {
+                    OrganizationId = orgs.ToList(),
+                    UserId = user.Id,
+                    UserName = user.UserName,
+                    //DefaultWarehouseId = Convert.ToInt32(org?.TransactionalWarehouseId)
+                };
+                var roles = context.AppUserRoles.Where(x => x.UserId == user.Id).Select(x => x.RoleId).ToList();
+                //var userRoles = context.AppUserRoles.Where(x => x.UserId == user.Id);
+                //var permission = (from userRole in userRoles
+                //                  join role_PermissionEntityLookUps in context.Role_PermissionEntityLookUps on userRole.RoleId equals role_PermissionEntityLookUps.RoleId
+                //                  join permissionEntityLookUp in context.PermissionEntityLookUps on role_PermissionEntityLookUps.PermissionEntityLookupId equals permissionEntityLookUp.Id
+                //                  join permissionEntity in context.PermissionEntities on permissionEntityLookUp.PermissionEntityId equals permissionEntity.Id
+                //                  join lookup in context.Lookups on permissionEntityLookUp.LookupId equals lookup.Id
+                //                  select new { permissionEntity.Name, lookup = lookup.Name });
+                //var data = permission.AsEnumerable().Select(x => string.Join(".", x.Name, x.lookup)).ToList();
+                return new UserInfoViewModel
+                {
+                    Email = User.Identity.GetUserName(),
+                    HasRegistered = externalLogin == null,
+                    LoginProvider = externalLogin != null ? externalLogin.LoginProvider : null,
+                    OrganizationIds = orgs.ToList(),
+                    Permissions = GetPermission(user.Id),
+                    Roles = roles
+                };
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        private List<string> GetPermission(int userId)
+        {
+            try
+            {
+                using (var context = new StoreContext())
+                {
+
+                    var userRoles = context.AppUserRoles.Where(x => x.UserId == userId);
+                    var permissionSelect = (from userRole in userRoles
+                                            join role_PermissionEntityLookUps in context.Role_PermissionEntityLookUps on userRole.RoleId equals role_PermissionEntityLookUps.RoleId
+                                            join permissionEntityLookUp in context.PermissionEntityLookUps on role_PermissionEntityLookUps.PermissionEntityLookupId equals permissionEntityLookUp.Id
+                                            join permissionEntity in context.PermissionEntities on permissionEntityLookUp.PermissionEntityId equals permissionEntity.Id
+                                            join lookup in context.Lookups on permissionEntityLookUp.LookupId equals lookup.Id
+                                            select new { permissionName = permissionEntity.PermissionName, lookupName = lookup.PermissionName }).AsNoTracking().AsEnumerable();
+                    var permissions = permissionSelect.Select(x => string.Join(".", x.permissionName, x.lookupName)).ToList();
+
+                    return permissions;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+
+        }
         // POST api/Account/Logout
         [Route("Logout")]
         public IHttpActionResult Logout()
@@ -136,7 +189,7 @@ namespace IMSAPI.Controllers
 
             IdentityResult result = await UserManager.ChangePasswordAsync(Convert.ToInt32(User.Identity.GetUserId()), model.OldPassword,
                 model.NewPassword);
-            
+
             if (!result.Succeeded)
             {
                 return GetErrorResult(result);
@@ -269,9 +322,9 @@ namespace IMSAPI.Controllers
             if (hasRegistered)
             {
                 Authentication.SignOut(DefaultAuthenticationTypes.ExternalCookie);
-                
-                 ClaimsIdentity oAuthIdentity = await user.GenerateUserIdentityAsync(UserManager,
-                    OAuthDefaults.AuthenticationType);
+
+                ClaimsIdentity oAuthIdentity = await user.GenerateUserIdentityAsync(UserManager,
+                   OAuthDefaults.AuthenticationType);
                 ClaimsIdentity cookieIdentity = await user.GenerateUserIdentityAsync(UserManager,
                     CookieAuthenticationDefaults.AuthenticationType);
 
@@ -379,7 +432,7 @@ namespace IMSAPI.Controllers
             result = await UserManager.AddLoginAsync(user.Id, info.Login);
             if (!result.Succeeded)
             {
-                return GetErrorResult(result); 
+                return GetErrorResult(result);
             }
             return Ok();
         }
@@ -431,7 +484,7 @@ namespace IMSAPI.Controllers
             return null;
         }
 
-        private class ExternalLoginData
+        public class ExternalLoginData
         {
             public string LoginProvider { get; set; }
             public string ProviderKey { get; set; }
