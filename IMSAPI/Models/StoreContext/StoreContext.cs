@@ -1,17 +1,23 @@
 ﻿using System;
 using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using Microsoft.AspNet.Identity;
+using Microsoft.AspNet.Identity.EntityFramework;
+using Microsoft.AspNet.Identity.Owin;
+using Microsoft.Owin;
 
 namespace IMSAPI.Models.UnboxFutureContext
 {
-    public class StoreContext : DbContext
+    public class StoreContext : IdentityDbContext<ApplicationUser, IdentityRole<int, IdentityUserRole<int>>, int, IdentityUserLogin<int>, IdentityUserRole<int>, IdentityUserClaim<int>>
     {
         public StoreContext()
             : base("name=StoreContext")
         {
             this.Database.Log = Console.Write;
             var adapter = (IObjectContextAdapter)this;
-            var objectContext = adapter.ObjectContext; 
+            var objectContext = adapter.ObjectContext;
             objectContext.CommandTimeout = 180;
         }
 
@@ -70,5 +76,10 @@ namespace IMSAPI.Models.UnboxFutureContext
         public DbSet<Consumption> Consumption { get; set; }
 
         public DbSet<ConsumptionItems> ConsumptionItems { get; set; }
+
+        public static StoreContext Create()
+        {
+            return new StoreContext();
+        }
     }
 }

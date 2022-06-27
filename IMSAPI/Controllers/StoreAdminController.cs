@@ -16,6 +16,7 @@ using IMSAPI.Models.UnboxFutureContext;
 
 namespace IMSAPI.Controllers
 {
+    [Authorize]
     public class StoreAdminController : ApiController
     {
         public string connStr = ConfigurationManager.ConnectionStrings["StoreContext"].ConnectionString;
@@ -2898,39 +2899,39 @@ namespace IMSAPI.Controllers
 
         #region Login
 
-        [Route("api/StoreAdmin/Login")]
-        [HttpPost]
-        public ApiResponse Login(UserLogin userLogin)
-        {
-            using (var context = new StoreContext())
-            {
-                try
-                {
-                    if (userLogin.UserId == "admin" && userLogin.Password == "admin")
-                    {
-                        return CommonUtils.CreateSuccessApiResponse(new UserDetail() { DefaultWarehouseId = 0, OrganizationId = 0, UserId = -1, UserName = "" });
-                    }
-                    var worker = context.Workers.FirstOrDefault(e =>
-                        e.UserId == userLogin.UserId && e.Password == userLogin.Password && e.IsBlocked == false &&
-                        e.Status == 1);
+        //[Route("api/StoreAdmin/Login")]
+        //[HttpPost]
+        //public ApiResponse Login(UserLogin userLogin)
+        //{
+        //    using (var context = new StoreContext())
+        //    {
+        //        try
+        //        {
+        //            if (userLogin.UserId == "admin" && userLogin.Password == "admin")
+        //            {
+        //                return CommonUtils.CreateSuccessApiResponse(new UserDetail() { DefaultWarehouseId = 0, OrganizationId = 0, UserId = -1, UserName = "" });
+        //            }
+        //            var worker = context.Workers.FirstOrDefault(e =>
+        //                e.UserId == userLogin.UserId && e.Password == userLogin.Password && e.IsBlocked == false &&
+        //                e.Status == 1);
 
-                    if (worker == null) return CommonUtils.CreateFailureApiResponse("Login Failed", -1);
-                    var org = context.Organizations.FirstOrDefault(x => x.OrganizationId == worker.OrganizationId);
-                    var userDetail = new UserDetail
-                    {
-                        OrganizationId = worker.OrganizationId,
-                        UserId = worker.WorkerId,
-                        UserName = worker.Name,
-                        DefaultWarehouseId = Convert.ToInt32(org?.TransactionalWarehouseId)
-                    };
-                    return CommonUtils.CreateSuccessApiResponse(userDetail);
-                }
-                catch (Exception ex)
-                {
-                    return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
-                }
-            }
-        }
+        //            if (worker == null) return CommonUtils.CreateFailureApiResponse("Login Failed", -1);
+        //            var org = context.Organizations.FirstOrDefault(x => x.OrganizationId == worker.OrganizationId);
+        //            var userDetail = new UserDetail
+        //            {
+        //                OrganizationId = worker.OrganizationId,
+        //                UserId = worker.WorkerId,
+        //                UserName = worker.Name,
+        //                DefaultWarehouseId = Convert.ToInt32(org?.TransactionalWarehouseId)
+        //            };
+        //            return CommonUtils.CreateSuccessApiResponse(userDetail);
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            return CommonUtils.CreateFailureApiResponse(GetErrorMessage(ex));
+        //        }
+        //    }
+        //}
 
         #endregion
 
