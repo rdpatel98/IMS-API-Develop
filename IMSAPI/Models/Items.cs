@@ -33,5 +33,6 @@ namespace IMSAPI.Models
         public double AvgPrice { get; set; }
         [NotMapped]
         public string SourceOfOriginName { get; set; }
+        public int? ItemTypeId { get; set; }
     }
 }
