@@ -13,6 +13,7 @@ namespace IMSAPI.Models
         [Key]
         public int ConsumptionItemsId { get; set; }
         public int ConsumptionId { get; set; }
+        public int ItemCategoryId { get; set; }
         public string LineNo { get; set; }
         public int ItemId { get; set; }
         public int UnitId { get; set; }

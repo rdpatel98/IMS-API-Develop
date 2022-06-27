@@ -225,6 +225,13 @@
     <Compile Include="Controllers\RolesController.cs" />
     <Compile Include="Controllers\StoreAdminController.cs" />
     <Compile Include="Controllers\ValuesController.cs" />
+    <Content Include="DbScripts\ItemTypes.sql" />
+    <Compile Include="DTO\PurchaseEnquiryReportFilter.cs" />
+    <Compile Include="DTO\OnHandReportFilter.cs" />
+    <Compile Include="DTO\ConsumptionReportFilter.cs" />
+    <Compile Include="DTO\PurchaseEnquiryReportModel.cs" />
+    <Compile Include="DTO\OnHandReportModel.cs" />
+    <Compile Include="DTO\ConsumptionReportModel.cs" />
     <Compile Include="Dto\CreatePermissionEntities\CreatePermissionEntity.cs" />
     <Compile Include="Dto\LookUps\CreateLookUp.cs" />
     <Compile Include="Dto\PermissionEntityLookUps\CreatePermissionEntityLookUp.cs" />
@@ -263,6 +270,7 @@
     <Compile Include="Models\ItemCategory.cs" />
     <Compile Include="Models\ItemCategoryCollection.cs" />
     <Compile Include="Models\ItemOnHandQty.cs" />
+    <Compile Include="Models\ItemTypes.cs" />
     <Compile Include="Models\Items.cs" />
     <Compile Include="Models\Organization.cs" />
     <Compile Include="Models\OrganizationAddress.cs" />

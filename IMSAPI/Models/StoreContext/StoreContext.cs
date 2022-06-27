@@ -31,6 +31,7 @@ namespace IMSAPI.Models.UnboxFutureContext
         public DbSet<UomConversion> UomConversions { get; set; }
 
         public DbSet<Items> Items { get; set; }
+        public DbSet<ItemTypes> ItemTypes { get; set; }
 
         public DbSet<Addresses> Addresses { get; set; }
 

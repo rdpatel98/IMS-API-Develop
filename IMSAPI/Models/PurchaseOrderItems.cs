@@ -10,10 +10,15 @@ namespace IMSAPI.Models
     [Table("PurchaseOrderItems")]
     public class PurchaseOrderItems
     {
+        public PurchaseOrderItems()
+        {
+
+        }
         [Key]
         public int PurchaseOrderItemsId { get; set; }
         public int PurchaseOrderId { get; set; }
         public short LineNo { get; set; }
+        public Items Item { get; set; }
         public int ItemId { get; set; }
         public int WarehouseId { get; set; }
         public double Quantity { get; set; }
@@ -22,5 +27,6 @@ namespace IMSAPI.Models
         public double NetAmount { get; set; }
         public int UpdatedUserId { get; set; }
         public DateTime UpdatedDateTime { get; set; }
+        
     }
 }
