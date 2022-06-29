@@ -70,16 +70,24 @@ namespace IMSAPI.Controllers
                 var context = new StoreContext();
                 var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
                 var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
-                //var org = context.Organizations.FirstOrDefault(x => x.OrganizationId == user.OrganizationId);
+                var defaultWarehouseId = 0;
+                var idsList = new List<int>();
+                if (orgs.Any())
+                {
+                    idsList = orgs.ToList();
+                    var org = context.Organizations.FirstOrDefault(x => orgs.Contains(x.OrganizationId));
+                    defaultWarehouseId = org.TransactionalWarehouseId;
+                }
+                
                 //List<int> orgIds = new List<int>();
                 //orgIds.Add(user.OrganizationId.Value);
-                var userDetail = new UserDetail
-                {
-                    OrganizationId = orgs.ToList(),
-                    UserId = user.Id,
-                    UserName = user.UserName,
-                    //DefaultWarehouseId = Convert.ToInt32(org?.TransactionalWarehouseId)
-                };
+                //var userDetail = new UserDetail
+                //{
+                //    OrganizationId = orgs.ToList(),
+                //    UserId = user.Id,
+                //    UserName = user.UserName,
+                //    //DefaultWarehouseId = Convert.ToInt32(orgs.TransactionalWarehouseId)
+                //};
                 var roles = context.AppUserRoles.Where(x => x.UserId == user.Id).Select(x => x.RoleId).ToList();
                 //var userRoles = context.AppUserRoles.Where(x => x.UserId == user.Id);
                 //var permission = (from userRole in userRoles
@@ -94,9 +102,10 @@ namespace IMSAPI.Controllers
                     Email = User.Identity.GetUserName(),
                     HasRegistered = externalLogin == null,
                     LoginProvider = externalLogin != null ? externalLogin.LoginProvider : null,
-                    OrganizationIds = orgs.ToList(),
+                    OrganizationIds =idsList,
                     Permissions = GetPermission(user.Id),
-                    Roles = roles
+                    Roles = roles,
+                    DefaultWarehouseId = defaultWarehouseId
                 };
             }
             catch (Exception ex)

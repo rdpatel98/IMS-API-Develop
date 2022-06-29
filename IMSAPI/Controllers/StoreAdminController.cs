@@ -3125,7 +3125,7 @@ namespace IMSAPI.Controllers
                                    $" row_number() over(partition by poi.ItemId, po.VendorId order by poi.PurchaseOrderItemsId desc) as RowNum " +
                                    $" from dbo.PurchaseOrderItems poi " +
                                    $" inner join dbo.PurchaseOrder po on poi.PurchaseOrderId = po.PurchaseOrderId ";
-                                   //$" where po.OrganizationId = {organizationId} ) " +
+                    //$" where po.OrganizationId = {organizationId} ) " +
                     var sqlQuery2 = $" select cte.ItemId, cte.UnitPrice, cte.VendorId, v.[Name] AS VendorName, v.Id AS VendorNo, cte.OrderDate " +
                                    $" from cteRowNumber cte " +
                                    $" inner join dbo.Vendor v ON v.VendorId = cte.VendorId " +
@@ -3876,8 +3876,15 @@ namespace IMSAPI.Controllers
         {
             using (var context = new StoreContext())
             {
-                var result = context.ItemTypes;
-                return CommonUtils.CreateSuccessApiResponse(await result.ToListAsync());
+                var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
+                var orgs = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId).ToList();
+                var result =await context.ItemTypes.ToListAsync();
+                if (orgs.Any())
+                {
+                    result = result.Where(x => x.OrganizationId.HasValue && orgs.Contains(x.OrganizationId.Value)).ToList();
+                }
+
+                return CommonUtils.CreateSuccessApiResponse(result);
             }
         }
 

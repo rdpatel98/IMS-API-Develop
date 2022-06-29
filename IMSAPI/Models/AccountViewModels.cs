@@ -35,6 +35,7 @@ namespace IMSAPI.Models
         public bool HasRegistered { get; set; }
 
         public string LoginProvider { get; set; }
+        public int DefaultWarehouseId { get; set; }
     }
 
     public class UserLoginInfoViewModel

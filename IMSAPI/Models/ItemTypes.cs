@@ -15,5 +15,6 @@ namespace IMSAPI.Models
         public string Name { get; set; }
         public int UpdatedUserId { get; set; }
         public DateTime UpdatedDateTime { get; set; }
+        public int? OrganizationId { get; set; }
     }
 }

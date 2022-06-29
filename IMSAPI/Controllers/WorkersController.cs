@@ -69,7 +69,7 @@ namespace IMSAPI.Controllers
         {
             using (var context = new StoreContext())
             {
-                
+
                 var resultList = context.Workers.Where(e => e.Status == 1).AsEnumerable()
                     .Select(x => new CreateWorkerDto()
                     {
@@ -99,7 +99,7 @@ namespace IMSAPI.Controllers
                 using (var context = new StoreContext())
                 {
                     var user = UserManager.Users.FirstOrDefault(x => x.WorkerId == workerid);
-                    if(user != null)
+                    if (user != null)
                     {
                         var userRole = UserManager.GetRoles(user.Id).FirstOrDefault();
                         var role = RoleManager.FindByName(userRole);
@@ -121,9 +121,9 @@ namespace IMSAPI.Controllers
                 {
                     var user = UserManager.Users.FirstOrDefault(x => x.WorkerId == workerid);
                     //var user = UserManager.FindById(Convert.ToInt32(User.Identity.GetUserId()));
-                    
-                    
-                    if(user != null)
+
+
+                    if (user != null)
                     {
                         var userOrganizationIds = context.UserOrganizations.Where(x => x.UserId == user.Id).Select(x => x.OrganizationId);
                         //var userRole = UserManager.GetRoles(user.Id).FirstOrDefault();
@@ -132,9 +132,9 @@ namespace IMSAPI.Controllers
                         return userOrganizationIds.ToList();
                     }
                     return new List<int>();
-                    
-                    
-                    
+
+
+
 
                 }
             }
@@ -274,9 +274,9 @@ namespace IMSAPI.Controllers
                         $"VALUES(N'{saveWorker.Worker.Email}', 1,N'{passwordHash}',N'{securityStamp}', NULL, 0, 0, NULL, 0, 0, N'{saveWorker.Worker.UserId}', @workId)" +
                         $"SET @userId = SCOPE_IDENTITY()" +
                         $"insert into AspNetUserRoles values(@userId,{saveWorker.Worker.RoleId})";
-                    if (saveWorker.Worker.OrganizationIds.Any())
+                    if (saveWorker.Worker.OrganizationIds != null && saveWorker.Worker.OrganizationIds.Any())
                     {
-                        foreach(var organizationId in saveWorker.Worker.OrganizationIds)
+                        foreach (var organizationId in saveWorker.Worker.OrganizationIds)
                         {
                             sqlQuery = sqlQuery +
                                 $"insert into UserOrganizations values(@userId,{organizationId})";
@@ -398,11 +398,19 @@ namespace IMSAPI.Controllers
                     $"Update WORKER set Name = '{objWorker.Worker.Name}',PersonnelNumber = '{objWorker.Worker.PersonnelNumber}' , " +
                     $"DOJ='{objWorker.Worker.DOJ.ToString("yyyy-MM-dd hh:mm:ss")}',DOB='{objWorker.Worker.DOB.ToString("yyyy-MM-dd hh:mm:ss")}'," +
                     $"UserId = '{objWorker.Worker.UserId}',Password = '{objWorker.Worker.Password}',UpdatedUserId=-1," +
-                    $"UpdatedDateTime='{DateTime.UtcNow.ToString("yyyy-MM-dd hh:mm:ss")}',Status=1,IsBlocked=0,Where WorkerId = {objWorker.Worker.WorkerId} " +
+                    $"UpdatedDateTime='{DateTime.UtcNow.ToString("yyyy-MM-dd hh:mm:ss")}',Status=1,IsBlocked=0 Where WorkerId = {objWorker.Worker.WorkerId} " +
                     $"Update ASPNETUSERS set Email = '{objWorker.Worker.Email}', EmailConfirmed = 1, PasswordHash = N'{passwordHash}', SecurityStamp = N'{securityStamp}'," +
                     $"UserName =  N'{objWorker.Worker.UserId}' Where WorkerId = '{objWorker.Worker.WorkerId}' " +
-                    $"Update ASPNETUSERROLES set RoleId = 1 Where UserId = (select Top 1Id  from AspNetUsers Where WorkerId = {objWorker.Worker.WorkerId})";
-
+                    $"Update ASPNETUSERROLES set RoleId = {objWorker.Worker.RoleId} Where UserId = (select Top 1 Id  from AspNetUsers Where WorkerId = {objWorker.Worker.WorkerId})" +
+                    $"delete from UserOrganizations WHere UserId = (select Top 1 Id  from AspNetUsers Where WorkerId = {objWorker.Worker.WorkerId})";
+                if (objWorker.Worker.OrganizationIds.Any())
+                {
+                    foreach (var organizationId in objWorker.Worker.OrganizationIds)
+                    {
+                        sqlQuery = sqlQuery +
+                            $"insert into UserOrganizations values((select Top 1 Id  from AspNetUsers Where WorkerId = {objWorker.Worker.WorkerId}),{organizationId})";
+                    }
+                }
                 var con = new SqlConnection(connStr);
                 con.Open();
 
