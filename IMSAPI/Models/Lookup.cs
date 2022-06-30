@@ -7,14 +7,12 @@ using System.Web;
 
 namespace IMSAPI.Models
 {
-    [Table("ItemTypes")]
-    public class ItemTypes
+    [Table("LookUps")]
+    public class Lookup
     {
         [Key]
-        public int ItemTypeId { get; set; }
+        public int Id { get; set; }
         public string Name { get; set; }
-        public int UpdatedUserId { get; set; }
-        public DateTime UpdatedDateTime { get; set; }
-        public int? OrganizationId { get; set; }
+        public string PermissionName { get; set; }
     }
 }

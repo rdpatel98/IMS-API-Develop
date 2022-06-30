@@ -10,6 +10,10 @@ namespace IMSAPI.Models
     [Table("Worker")]
     public class Worker
     {
+        //public Worker()
+        //{
+        //    Users = new HashSet<ApplicationUser>();
+        //}
         [Key]
         public int WorkerId { get; set; }
         public string Name { get; set; }
@@ -22,8 +26,7 @@ namespace IMSAPI.Models
         public DateTime UpdatedDateTime { get; set; }
         public short Status { get; set; }
         public bool IsBlocked { get; set; }
-        public int OrganizationId { get; set; }
-        public string UserMasterId { get; set; }
-
+        //public int OrganizationId { get; set; }
+        //public virtual ICollection<ApplicationUser> Users { get; set; }
     }
 }

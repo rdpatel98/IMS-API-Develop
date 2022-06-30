@@ -10,7 +10,7 @@ using Microsoft.Owin;
 
 namespace IMSAPI.Models.UnboxFutureContext
 {
-    public class StoreContext : IdentityDbContext<ApplicationUser, IdentityRole<int, IdentityUserRole<int>>, int, IdentityUserLogin<int>, IdentityUserRole<int>, IdentityUserClaim<int>>
+    public class StoreContext : IdentityDbContext<ApplicationUser, AppRole, int, AppUserLogin, AppUserRole, AppUserClaim>
     {
         public StoreContext()
             : base("name=StoreContext")
@@ -76,10 +76,17 @@ namespace IMSAPI.Models.UnboxFutureContext
         public DbSet<Consumption> Consumption { get; set; }
 
         public DbSet<ConsumptionItems> ConsumptionItems { get; set; }
+        public DbSet<Lookup> Lookups { get; set; }
+        public DbSet<PermissionEntity> PermissionEntities { get; set; }
+        public DbSet<PermissionEntityLookUp> PermissionEntityLookUps { get; set; }
+        public DbSet<Role_PermissionEntityLookUp> Role_PermissionEntityLookUps { get; set; }
+        public DbSet<UserOrganization> UserOrganizations { get; set; }
 
         public static StoreContext Create()
         {
             return new StoreContext();
         }
+
+        public System.Data.Entity.DbSet<IMSAPI.Models.AppUserRole> AppUserRoles { get; set; }
     }
 }
