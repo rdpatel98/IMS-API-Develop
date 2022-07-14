@@ -48,6 +48,11 @@ namespace IMSAPI.Controllers
                 }
                 using (var context = new StoreContext())
                 {
+                    var lookupExist = context.Lookups.Where(x => x.Name.ToLower() == model.Name.ToLower());
+                    if (lookupExist.Any())
+                    {
+                        throw new Exception("LookUp Name already exist in system");
+                    }
                     var lookup = new Lookup() { Name = model.Name, PermissionName = model.Name.Replace(" ", "_") };
                     context.Lookups.Add(lookup);
                     await context.SaveChangesAsync();

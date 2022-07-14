@@ -6,9 +6,7 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
-using System.Web.Http.ModelBinding;
 using Microsoft.AspNet.Identity;
-using Microsoft.AspNet.Identity.EntityFramework;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin.Security;
 using Microsoft.Owin.Security.Cookies;
@@ -19,8 +17,6 @@ using IMSAPI.Results;
 using IMSAPI.Models.UnboxFutureContext;
 using System.Linq;
 using System.Data.Entity;
-using IMSAPI.Filters;
-using IMSAPI.Common;
 
 namespace IMSAPI.Controllers
 {
