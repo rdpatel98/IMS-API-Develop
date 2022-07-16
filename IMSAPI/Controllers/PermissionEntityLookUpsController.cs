@@ -76,9 +76,13 @@ namespace IMSAPI.Controllers
                 {
                     foreach(var lookup in model.LookUpIds)
                     {
-                        var permissionEntityLookUp = new PermissionEntityLookUp() { PermissionEntityId = model.EntityId, LookupId = lookup };
-                        context.PermissionEntityLookUps.Add(permissionEntityLookUp);
-                        await context.SaveChangesAsync();
+                        var isExistData = context.PermissionEntityLookUps.Any(x => x.PermissionEntityId == model.EntityId && x.LookupId == lookup);
+                        if(!isExistData)
+                        {
+                            var permissionEntityLookUp = new PermissionEntityLookUp() { PermissionEntityId = model.EntityId, LookupId = lookup };
+                            context.PermissionEntityLookUps.Add(permissionEntityLookUp);
+                            await context.SaveChangesAsync();
+                        }
                     }
                     return Ok();
                 }
@@ -126,7 +130,12 @@ namespace IMSAPI.Controllers
                 }
                 using (var context = new StoreContext())
                 {
-                    var oldData = context.PermissionEntityLookUps.Where(x => x.PermissionEntityId == model.EntityId);
+                    var oldData = context.PermissionEntityLookUps.Include(x=>x.Role_PermissionEntityLookUps).Where(x => x.PermissionEntityId == model.EntityId).ToList();
+                    foreach(var data in oldData.Select(x => x.Role_PermissionEntityLookUps))
+                    {
+                        context.Role_PermissionEntityLookUps.RemoveRange(data);
+                        await context.SaveChangesAsync();
+                    }
                     context.PermissionEntityLookUps.RemoveRange(oldData);
                     await context.SaveChangesAsync();
 
@@ -154,9 +163,13 @@ namespace IMSAPI.Controllers
             {
                 using (var context = new StoreContext())
                 {
-                    var oldData = context.PermissionEntityLookUps.Where(x => x.PermissionEntityId == entityId);
+                    var oldData = context.PermissionEntityLookUps.Include(x => x.Role_PermissionEntityLookUps).Where(x => x.PermissionEntityId == entityId).ToList();
+                    foreach (var data in oldData.Select(x => x.Role_PermissionEntityLookUps))
+                    {
+                        context.Role_PermissionEntityLookUps.RemoveRange(data);
+                        await context.SaveChangesAsync();
+                    }
                     context.PermissionEntityLookUps.RemoveRange(oldData);
-                    await context.SaveChangesAsync();
                     if (await context.SaveChangesAsync() > 0)
                     {
                         return GetErrorResult(await context.SaveChangesAsync() > 0);
