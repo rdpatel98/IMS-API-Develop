@@ -1,4 +1,7 @@
-﻿
+﻿ Alter Table ConsumptionItems
+ Add ItemCategoryId int not null
+ ALTER TABLE [dbo].[ConsumptionItems] ADD  DEFAULT ((0)) FOR [ItemCategoryId]
+
 INSERT [dbo].[AspNetUsers] ([Id],[Email], [EmailConfirmed], [PasswordHash], [SecurityStamp],   
 [PhoneNumber], [PhoneNumberConfirmed], [TwoFactorEnabled], [LockoutEndDateUtc], [LockoutEnabled],   
 [AccessFailedCount], [UserName],[OrganizationId],[WorkerId])   

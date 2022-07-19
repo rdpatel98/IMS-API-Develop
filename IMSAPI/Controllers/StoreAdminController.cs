@@ -3126,13 +3126,13 @@ namespace IMSAPI.Controllers
                                    $" from dbo.PurchaseOrderItems poi " +
                                    $" inner join dbo.PurchaseOrder po on poi.PurchaseOrderId = po.PurchaseOrderId ";
                     //$" where po.OrganizationId = {organizationId} ) " +
-                    var sqlQuery2 = $" select cte.ItemId, cte.UnitPrice, cte.VendorId, v.[Name] AS VendorName, v.Id AS VendorNo, cte.OrderDate " +
+                    var sqlQuery2 = $") select cte.ItemId, cte.UnitPrice, cte.VendorId, v.[Name] AS VendorName, v.Id AS VendorNo, cte.OrderDate " +
                                    $" from cteRowNumber cte " +
                                    $" inner join dbo.Vendor v ON v.VendorId = cte.VendorId " +
                                    $" where RowNum = 1 and cte.ItemId = {itemId}";
                     if (orgs.Any())
                     {
-                        sqlQuery1 = sqlQuery1 + $"where po.OrganizationId = ({org_Ids}) )";
+                        sqlQuery1 = sqlQuery1 + $"where po.OrganizationId in ({org_Ids}) ";
                     }
                     var sqlQuery = sqlQuery1 + sqlQuery2;
                     using (var command = new SqlCommand(sqlQuery, con))
@@ -3323,7 +3323,7 @@ namespace IMSAPI.Controllers
                     $" row_number() over(partition by s.ItemId , s.WarehouseId order by s.StockId desc) as RowNum from dbo.Stock s " +
                     $" INNER JOIN dbo.Items i ON i.ItemId = s.ItemId " +
                     $" where s.ItemId = {itemId} ";
-                    var sqlQuery2 = $" select cte.ItemId, w.[Name] AS WarehouseName, u.[Name] AS Unit, cte.OnHandQuantity , i.ItemNo from cteRowNumber cte  " +
+                    var sqlQuery2 = $") select cte.ItemId, w.[Name] AS WarehouseName, u.[Name] AS Unit, cte.OnHandQuantity , i.ItemNo from cteRowNumber cte  " +
                     $" INNER JOIN dbo.Items i ON i.ItemId = cte.ItemId " +
                     $" INNER JOIN dbo.UomConversion u ON u.Id = i.InventoryUnitId " +
                     $" INNER JOIN dbo.WareHouse w ON w.WarehouseId = cte.WarehouseId where cte.RowNum = 1 ";
